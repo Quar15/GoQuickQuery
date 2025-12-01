@@ -79,18 +79,6 @@ func (z *Zone) UpdateZoneScroll() {
 	z.InitZoneScrollbars()
 
 	var mouse rl.Vector2 = rl.GetMousePosition()
-	var mouseWheelStep float32 = 40
-
-	// Only scroll if mouse inside the zone
-	if rl.CheckCollisionPointRec(mouse, z.Bounds) {
-		if rl.IsKeyDown(rl.KeyLeftShift) {
-			// Mouse wheel scroll (horizontal)
-			z.Scroll.X -= rl.GetMouseWheelMove() * mouseWheelStep
-		} else {
-			// Mouse wheel scroll (vertical)
-			z.Scroll.Y -= rl.GetMouseWheelMove() * mouseWheelStep
-		}
-	}
 
 	if rl.IsMouseButtonPressed(rl.MouseButtonLeft) && rl.CheckCollisionPointRec(mouse, z.vScrollbar.Thumb) {
 		z.vScrollbar.Dragging = true

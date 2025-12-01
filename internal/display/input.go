@@ -9,6 +9,20 @@ import (
 
 func HandleSpreadsheetInput(z *Zone, dg *database.DataGrid, cursor *SpreadsheetCursor, cellHeight int32) {
 	var keyPressed int32 = rl.GetCharPressed()
+
+	var mouse rl.Vector2 = rl.GetMousePosition()
+	var mouseWheelStep int32 = 1
+	// Only scroll if mouse inside the zone
+	if rl.CheckCollisionPointRec(mouse, z.Bounds) {
+		if rl.IsKeyDown(rl.KeyLeftShift) {
+			// Mouse wheel scroll (horizontal)
+			cursor.Col -= int8(rl.GetMouseWheelMove()) * int8(mouseWheelStep)
+		} else {
+			// Mouse wheel scroll (vertical)
+			cursor.Row -= int32(rl.GetMouseWheelMove()) * mouseWheelStep
+		}
+	}
+
 	switch cursor.Mode {
 	case ModeVLine:
 		fallthrough
@@ -18,17 +32,11 @@ func HandleSpreadsheetInput(z *Zone, dg *database.DataGrid, cursor *SpreadsheetC
 		if rl.IsKeyDown(rl.KeyLeftShift) {
 			switch {
 			case rl.IsKeyPressed(rl.KeyHome):
-				z.Scroll.X = 0
 				cursor.Col = 0
 			case rl.IsKeyPressed(rl.KeyEnd):
-				z.Scroll.X = z.ContentSize.X - z.Bounds.Width
 				cursor.Col = dg.Cols - 1
-			case rl.IsKeyPressed(rl.KeyV):
-				cursor.SetSelect(0, cursor.Row, dg.Cols-1, cursor.Row)
-				cursor.TransitionMode(ModeVLine)
-			case rl.IsKeyPressed(rl.KeyG):
-				cursor.Row = dg.Rows - 1
-				z.Scroll.Y = z.ContentSize.Y - z.Bounds.Height
+			case utilities.Contains(HANDLED_MOTION_KEY_CODES, int(keyPressed)):
+				cursor.AppendMotion(rune(keyPressed))
 			}
 		} else if rl.IsKeyDown(rl.KeyLeftControl) {
 			switch {
@@ -52,39 +60,29 @@ func HandleSpreadsheetInput(z *Zone, dg *database.DataGrid, cursor *SpreadsheetC
 			switch {
 			case rl.IsKeyPressed(rl.KeyEscape) || rl.IsKeyPressed(rl.KeyCapsLock): // @TODO: Remove personal preference CapsLock
 				cursor.Reset()
-			case rl.IsKeyPressed(rl.KeyHome):
-				cursor.Row = 0
-				z.Scroll.Y = 0
-			case rl.IsKeyPressed(rl.KeyEnd):
-				cursor.Row = dg.Rows - 1
-				z.Scroll.Y = z.ContentSize.Y - z.Bounds.Height
-			case rl.IsKeyPressed(rl.KeyPageUp):
-				cursor.Row -= int32(pageRows)
-				z.Scroll.Y -= float32(cellHeight * int32(pageRows))
-			case rl.IsKeyPressed(rl.KeyPageDown):
-				cursor.Row += int32(pageRows)
-				z.Scroll.Y += float32(cellHeight * int32(pageRows))
-			case rl.IsKeyPressed(rl.KeyJ) || rl.IsKeyPressed(rl.KeyDown):
-				z.Scroll.Y += float32(cellHeight)
-				cursor.Row++
-			case rl.IsKeyPressed(rl.KeyK) || rl.IsKeyPressed(rl.KeyUp):
-				z.Scroll.Y -= float32(cellHeight)
-				cursor.Row--
-			case rl.IsKeyPressed(rl.KeyH) || rl.IsKeyPressed(rl.KeyLeft):
-				z.Scroll.X -= float32(dg.ColumnsWidth[cursor.Col])
-				cursor.Col--
-			case rl.IsKeyPressed(rl.KeyL) || rl.IsKeyPressed(rl.KeyRight):
-				z.Scroll.X += float32(dg.ColumnsWidth[cursor.Col])
-				cursor.Col++
-			case rl.IsKeyPressed(rl.KeyV):
-				cursor.SetSelect(cursor.Col, cursor.Row, cursor.Col, cursor.Row)
+			case utilities.Contains(HANDLED_MOTION_KEY_CODES, int(keyPressed)):
+				cursor.AppendMotion(rune(keyPressed))
 			case rl.IsKeyPressed(rl.KeySlash):
 				cursor.Mode = ModeCommand
 				cursor.CmdBuf = "/"
 				cursor.MotionBuf = "/"
 				cursor.UpdateCmdLine()
-			case rl.IsKeyPressed(rl.KeyG):
-				cursor.MotionBuf += "g"
+			case rl.IsKeyPressed(rl.KeyHome):
+				cursor.Row = 0
+			case rl.IsKeyPressed(rl.KeyEnd):
+				cursor.Row = dg.Rows - 1
+			case rl.IsKeyPressed(rl.KeyPageUp):
+				cursor.Row -= int32(pageRows)
+			case rl.IsKeyPressed(rl.KeyPageDown):
+				cursor.Row += int32(pageRows)
+			case rl.IsKeyPressed(rl.KeyDown):
+				cursor.Row++
+			case rl.IsKeyPressed(rl.KeyUp):
+				cursor.Row--
+			case rl.IsKeyPressed(rl.KeyLeft):
+				cursor.Col--
+			case rl.IsKeyPressed(rl.KeyRight):
+				cursor.Col++
 			}
 		}
 	case ModeCommand:

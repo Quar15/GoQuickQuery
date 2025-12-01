@@ -1,8 +1,13 @@
 package display
 
 import (
+	"fmt"
+	"regexp"
+	"strconv"
+
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/colors"
+	"github.com/quar15/qq-go/internal/utilities"
 )
 
 type CursorMode int8
@@ -151,6 +156,77 @@ func (c *SpreadsheetCursor) IsSelected(col int8, row int32) bool {
 	}
 
 	return col >= c.SelectStartCol && col <= c.SelectEndCol && row >= c.SelectStartRow && row <= c.SelectEndRow
+}
+
+var HANDLED_MOTION_KEY_CODES []int = []int{
+	utilities.KeySmallJ, utilities.KeySmallK, utilities.KeySmallH, utilities.KeySmallL,
+	rl.KeyZero, rl.KeyOne, rl.KeyTwo, rl.KeyThree, rl.KeyFour, rl.KeyFive, rl.KeySix, rl.KeySeven, rl.KeyEight, rl.KeyNine,
+	rl.KeyV,
+	rl.KeyG, utilities.KeySmallG,
+}
+
+func (c *SpreadsheetCursor) AppendMotion(char rune) {
+	c.MotionBuf += string(char)
+	c.CheckForMotion()
+}
+
+func (c *SpreadsheetCursor) CheckForMotion() {
+	motionExecuted := false
+	switch c.MotionBuf {
+	case "j":
+		c.Row++
+		motionExecuted = true
+	case "k":
+		c.Row--
+		motionExecuted = true
+	case "h":
+		c.Col--
+		motionExecuted = true
+	case "l":
+		c.Col++
+		motionExecuted = true
+	case "G":
+		c.Row = c.MaxRow
+		motionExecuted = true
+	case "gg":
+		c.Row = 0
+		motionExecuted = true
+	case "V":
+		c.SetSelect(0, c.Row, c.MaxCol, c.Row)
+		c.TransitionMode(ModeVLine)
+		motionExecuted = true
+	case "v":
+		c.SetSelect(c.Col, c.Row, c.Col, c.Row)
+		motionExecuted = true
+	default:
+		var motionRe = regexp.MustCompile(`^([0-9]+)([hjklG])$`)
+		match := motionRe.FindStringSubmatch(c.MotionBuf)
+		if match != nil {
+			num, _ := strconv.Atoi(match[1])
+			cmd := match[2]
+			switch cmd {
+			case "j":
+				c.Row += int32(num)
+				motionExecuted = true
+			case "k":
+				c.Row -= int32(num)
+				motionExecuted = true
+			case "h":
+				c.Col -= int8(num)
+				motionExecuted = true
+			case "l":
+				c.Col += int8(num)
+				motionExecuted = true
+			case "G":
+				c.Row = int32(num - 1)
+				motionExecuted = true
+			}
+		}
+	}
+
+	if motionExecuted {
+		c.MotionBuf = ""
+	}
 }
 
 func (c *SpreadsheetCursor) UpdateCmdLine() {

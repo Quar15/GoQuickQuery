@@ -26,12 +26,21 @@ func (z *Zone) DrawSpreadsheetZone(appAssets *assets.Assets, dg *database.DataGr
 	var contentHeight int = 0
 	var counterColumnCharactersCount int = utilities.CountDigits(int(dg.Rows))
 	var counterColumnWidth int = int(appAssets.MainFontCharacterWidth)*counterColumnCharactersCount + int(textPadding*2)
+	contentWidth += counterColumnWidth
 	for col := int8(0); col < dg.Cols; col++ {
 		contentWidth += int(dg.ColumnsWidth[col])
 	}
 
+	// Update scroll based on cursor
+	z.Scroll.Y = float32(cellHeight * int(cursor.Row))
+	z.Scroll.X = 0
+	for col := int8(0); col < cursor.Col; col++ {
+		z.Scroll.X += float32(dg.ColumnsWidth[col])
+	}
+	z.ClampScrollsToZoneSize()
+
 	var rowsToRender int8 = z.GetNumberOfVisibleRows(int32(cellHeight)) + 2
-	var firstVisibleRowToScrollIndex int32 = int32(z.Scroll.Y) / int32(cellHeight)
+	var firstVisibleRowToScrollIndex int32 = min(max(int32(z.Scroll.Y)/int32(cellHeight), 0), dg.Rows) // Swapping screens creates weird behavior
 	var lastRowToRender = min(dg.Rows, firstVisibleRowToScrollIndex+int32(rowsToRender))
 
 	HandleSpreadsheetInput(z, dg, cursor, int32(cellHeight))

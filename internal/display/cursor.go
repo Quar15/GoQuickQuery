@@ -1,7 +1,6 @@
 package display
 
 import (
-	"fmt"
 	"regexp"
 	"strconv"
 
@@ -161,7 +160,7 @@ func (c *SpreadsheetCursor) IsSelected(col int8, row int32) bool {
 var HANDLED_MOTION_KEY_CODES []int = []int{
 	utilities.KeySmallJ, utilities.KeySmallK, utilities.KeySmallH, utilities.KeySmallL,
 	rl.KeyZero, rl.KeyOne, rl.KeyTwo, rl.KeyThree, rl.KeyFour, rl.KeyFive, rl.KeySix, rl.KeySeven, rl.KeyEight, rl.KeyNine,
-	rl.KeyV,
+	rl.KeyV, utilities.KeySmallV,
 	rl.KeyG, utilities.KeySmallG,
 }
 

@@ -1,7 +1,8 @@
 package utilities
 
 import (
-	"strconv"
+	"fmt"
+	"time"
 )
 
 const KeySmallG int = 103
@@ -42,8 +43,20 @@ func GetValueAsString(val any) string {
 	switch val := val.(type) {
 	case string:
 		return val
-	case int:
-		return strconv.Itoa(int(val))
+	case int, int8, int16, int32, int64,
+		uint, uint8, uint16, uint32, uint64:
+		return fmt.Sprintf("%v", val)
+	case time.Time:
+		// @TODO: Consider specific formatting
+		return fmt.Sprintf("%v", val)
 	}
-	return ""
+	return fmt.Sprintf("ERR: UNHANDLED TYPE '%T'", val)
+}
+
+func DebugPrintMap(m []map[string]any) {
+	for i, data := range m {
+		for k, v := range data {
+			fmt.Printf("idx = %v | key = %v | val =  %v | type=%T\n", i, k, v, v)
+		}
+	}
 }

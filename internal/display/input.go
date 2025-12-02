@@ -1,13 +1,18 @@
 package display
 
 import (
+	"fmt"
+	"log/slog"
+
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"github.com/jackc/pgx/v5"
+	"github.com/quar15/qq-go/internal/assets"
 	"github.com/quar15/qq-go/internal/database"
 	"github.com/quar15/qq-go/internal/utilities"
 	"golang.design/x/clipboard"
 )
 
-func HandleSpreadsheetInput(z *Zone, dg *database.DataGrid, cursor *SpreadsheetCursor, cellHeight int32) {
+func HandleSpreadsheetInput(z *Zone, dg *database.DataGrid, cursor *SpreadsheetCursor, appAssets *assets.Assets, cellHeight int32) {
 	var keyPressed int32 = rl.GetCharPressed()
 
 	var mouse rl.Vector2 = rl.GetMousePosition()
@@ -40,6 +45,21 @@ func HandleSpreadsheetInput(z *Zone, dg *database.DataGrid, cursor *SpreadsheetC
 			}
 		} else if rl.IsKeyDown(rl.KeyLeftControl) {
 			switch {
+			case rl.IsKeyPressed(rl.KeyEnter):
+				// @TODO: Get query from editor (temp hard code)
+				conn, _ := database.DBConnections["postgres"].(*pgx.Conn)
+				newDg, err := database.QueryRows(conn)
+				if err != nil {
+					slog.Error("Failed to execute query")
+				} else {
+					*dg = *newDg
+					dg.UpdateColumnsWidth(appAssets)
+					utilities.DebugPrintMap(dg.Data)
+					cursor.Reset()
+					log_info := fmt.Sprintf("Querying '%s'", "XYZ")
+					slog.Info(log_info)
+					cursor.Logs.Channel <- log_info
+				}
 			case rl.IsKeyDown(rl.KeyC):
 				// @TODO: Add type specific formatting
 				var dataString string = ""

@@ -27,10 +27,10 @@ func (dg *DataGrid) FakeInit(appAssets *assets.Assets) {
 	dg.Headers = []string{"ID", "name", "created_at"}
 	dg.Rows = int32(len(dg.Data))
 	dg.Cols = int8(len(dg.Data[0]))
-	dg.updateColumnsWidth(appAssets)
+	dg.UpdateColumnsWidth(appAssets)
 }
 
-func (dg *DataGrid) updateColumnsWidth(appAssets *assets.Assets) {
+func (dg *DataGrid) UpdateColumnsWidth(appAssets *assets.Assets) {
 	const maximumColWidth int32 = 600
 	const minimumColWidth int32 = 50
 	const textPadding int32 = 8
@@ -86,6 +86,6 @@ func LoadDataGridFromCSV(path string, appAssets *assets.Assets) (DataGrid, error
 		dg.Rows++
 	}
 
-	dg.updateColumnsWidth(appAssets)
+	dg.UpdateColumnsWidth(appAssets)
 	return dg, nil
 }

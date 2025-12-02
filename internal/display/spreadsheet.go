@@ -43,7 +43,7 @@ func (z *Zone) DrawSpreadsheetZone(appAssets *assets.Assets, dg *database.DataGr
 	var firstVisibleRowToScrollIndex int32 = min(max(int32(z.Scroll.Y)/int32(cellHeight), 0), dg.Rows) // Swapping screens creates weird behavior
 	var lastRowToRender = min(dg.Rows, firstVisibleRowToScrollIndex+int32(rowsToRender))
 
-	HandleSpreadsheetInput(z, dg, cursor, int32(cellHeight))
+	HandleSpreadsheetInput(z, dg, cursor, appAssets, int32(cellHeight))
 	rl.BeginScissorMode(int32(z.Bounds.X), int32(z.Bounds.Y), int32(z.Bounds.Width), int32(z.Bounds.Height))
 
 	for row := firstVisibleRowToScrollIndex; row < lastRowToRender; row++ {

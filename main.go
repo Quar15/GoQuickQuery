@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gen2brain/raylib-go/raylib"
+	"github.com/jackc/pgx/v5"
 	"github.com/lmittmann/tint"
 	"golang.design/x/clipboard"
 
@@ -17,7 +19,7 @@ import (
 	"github.com/quar15/qq-go/internal/display"
 )
 
-func main() {
+func initialize() error {
 	slog.SetDefault(slog.New(
 		tint.NewHandler(os.Stdout, &tint.Options{
 			Level:      slog.LevelDebug,
@@ -27,7 +29,30 @@ func main() {
 	err := clipboard.Init()
 	if err != nil {
 		slog.Error("Failed to initialize clipboard", slog.Any("error", err))
-		return
+		return err
+	}
+	// @TODO: Map of connections initialized on demand
+	postgresConn, err := database.ConnectToPostgres()
+	if err != nil {
+		slog.Error("Failed to initialize postgres connection", slog.Any("error", err))
+		return err
+	} else {
+		database.DBConnections["postgres"] = postgresConn
+	}
+
+	return nil
+}
+
+func main() {
+	err := initialize()
+	if err != nil {
+		panic("Failed to initialize")
+	}
+	for _, conn := range database.DBConnections {
+		c, ok := conn.(*pgx.Conn)
+		if ok {
+			defer c.Close(context.Background())
+		}
 	}
 	var spreadsheetCursor display.SpreadsheetCursor
 	spreadsheetCursor.Init()

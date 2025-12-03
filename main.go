@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/lmittmann/tint"
 	"golang.design/x/clipboard"
+	"gopkg.in/yaml.v3"
 
 	"github.com/quar15/qq-go/internal/assets"
 	"github.com/quar15/qq-go/internal/colors"
@@ -19,7 +20,25 @@ import (
 	"github.com/quar15/qq-go/internal/display"
 )
 
-func initialize() error {
+type Config struct {
+	Connections []database.ConnectionData `yaml:"connections"`
+}
+
+func loadConfig(path string) (*Config, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
+}
+
+func initialize(cfg *Config) error {
 	slog.SetDefault(slog.New(
 		tint.NewHandler(os.Stdout, &tint.Options{
 			Level:      slog.LevelDebug,
@@ -31,28 +50,20 @@ func initialize() error {
 		slog.Error("Failed to initialize clipboard", slog.Any("error", err))
 		return err
 	}
-	// @TODO: Map of connections initialized on demand
-	postgresConn, err := database.ConnectToPostgres()
-	if err != nil {
-		slog.Error("Failed to initialize postgres connection", slog.Any("error", err))
-		return err
-	} else {
-		database.DBConnections["postgres"] = postgresConn
-	}
+	database.InitializeConnections(cfg.Connections)
 
 	return nil
 }
 
 func main() {
-	err := initialize()
+	cfg, err := loadConfig("./gqq.yaml")
+	if err != nil {
+		slog.Error("Failed to read config", slog.Any("error", err))
+		os.Exit(1)
+	}
+	err = initialize(cfg)
 	if err != nil {
 		panic("Failed to initialize")
-	}
-	for _, conn := range database.DBConnections {
-		c, ok := conn.(*pgx.Conn)
-		if ok {
-			defer c.Close(context.Background())
-		}
 	}
 	var spreadsheetCursor display.SpreadsheetCursor
 	spreadsheetCursor.Init()
@@ -150,5 +161,12 @@ func main() {
 		rl.DrawRectangleRec(splitter.Rect, colors.Crust())
 
 		rl.EndDrawing()
+	}
+
+	for _, connData := range database.DBConnections {
+		switch c := connData.Conn.(type) {
+		case *pgx.Conn:
+			c.Close(context.Background())
+		}
 	}
 }

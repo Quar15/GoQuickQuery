@@ -12,8 +12,8 @@ import (
 func queryRows(conn *pgx.Conn, query string) (data []map[string]any, headers []string, colsN int8, rowsN int32, err error) {
 	rows, err := conn.Query(context.Background(), query)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Query failed: %v\n", err)
-		os.Exit(1)
+		slog.Error(fmt.Sprintf("Query failed: %s", query), slog.Any("error", err))
+		return nil, nil, 0, 0, err
 	}
 	defer rows.Close()
 
@@ -45,10 +45,11 @@ func queryRows(conn *pgx.Conn, query string) (data []map[string]any, headers []s
 	return results, columns, colsN, rowsN, nil
 }
 
-func QueryRows(conn *pgx.Conn) (dg *DataGrid, err error) {
-	data, headers, cols, rows, err := queryRows(conn, "SELECT * FROM example LIMIT 500;")
+func QueryRows(conn *pgx.Conn, query string) (dg *DataGrid, err error) {
+	// @TODO: Sanitize query to always limit number of results
+	data, headers, cols, rows, err := queryRows(conn, query)
 	if err != nil {
-		slog.Error("Failed to execute query", slog.Any("err", err))
+		slog.Error(fmt.Sprintf("Failed to execute query '%s'", query), slog.Any("error", err))
 		return nil, err
 	} else {
 		slog.Info("Query finished")
@@ -62,9 +63,9 @@ func QueryRows(conn *pgx.Conn) (dg *DataGrid, err error) {
 	return dg, nil
 }
 
-func ConnectToPostgres() (*pgx.Conn, error) {
-	dbUrl := "postgres://postgres@127.0.0.1:5432/tmp"
-	conn, err := pgx.Connect(context.Background(), dbUrl)
+func ConnectToPostgres(connString string) (*pgx.Conn, error) {
+	slog.Debug("Trying to connect with postgres", slog.String("connString", connString))
+	conn, err := pgx.Connect(context.Background(), connString)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		return nil, err

@@ -5,7 +5,6 @@ import (
 	"log/slog"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
-	"github.com/jackc/pgx/v5"
 	"github.com/quar15/qq-go/internal/assets"
 	"github.com/quar15/qq-go/internal/database"
 	"github.com/quar15/qq-go/internal/utilities"
@@ -47,16 +46,17 @@ func HandleSpreadsheetInput(z *Zone, dg *database.DataGrid, cursor *SpreadsheetC
 			switch {
 			case rl.IsKeyPressed(rl.KeyEnter):
 				// @TODO: Get query from editor (temp hard code)
-				conn, _ := database.DBConnections["postgres"].(*pgx.Conn)
-				newDg, err := database.QueryRows(conn)
+				query := "SELECT 1;"
+				newDg, err := database.QueryData("postgres", query)
 				if err != nil {
-					slog.Error("Failed to execute query")
+					slog.Error("Failed to execute query", slog.Any("error", err))
+					cursor.Logs.Channel <- "Failed to execute query (Something went wrong)"
 				} else {
 					*dg = *newDg
 					dg.UpdateColumnsWidth(appAssets)
 					utilities.DebugPrintMap(dg.Data)
 					cursor.Reset()
-					log_info := fmt.Sprintf("Querying '%s'", "XYZ")
+					log_info := fmt.Sprintf("Querying '%s'", query)
 					slog.Info(log_info)
 					cursor.Logs.Channel <- log_info
 				}

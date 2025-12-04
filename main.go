@@ -18,6 +18,7 @@ import (
 	"github.com/quar15/qq-go/internal/colors"
 	"github.com/quar15/qq-go/internal/database"
 	"github.com/quar15/qq-go/internal/display"
+	"github.com/quar15/qq-go/internal/utilities"
 )
 
 type Config struct {
@@ -67,6 +68,7 @@ func main() {
 	}
 	var spreadsheetCursor display.SpreadsheetCursor
 	spreadsheetCursor.Init()
+	defer shutdown()
 
 	// --- Init Window ---
 	var screenWidth int = rl.GetScreenWidth()
@@ -150,6 +152,26 @@ func main() {
 			}
 		}
 
+		// --- Querying ---
+
+		for _, connData := range database.DBConnections {
+			if connData.Conn == false || connData.ConnCtx == nil {
+				continue
+			}
+			newDg, done, err := database.CheckForResult(*connData.ConnCtx, connData.QueryChannel, connData.Name)
+			if err != nil {
+				slog.Error("Something went wrong during query", slog.Any("error", err))
+				database.DBConnections[connData.Name].Conn = false
+			} else if done == true {
+				dg = *newDg
+				dg.UpdateColumnsWidth(&appAssets)
+				utilities.DebugPrintMap(dg.Data)
+				spreadsheetCursor.Reset()
+				spreadsheetCursor.Logs.Channel <- fmt.Sprintf("'%s' finished", connData.QueryText)
+				// @TODO: Add system notification for query finish
+			}
+		}
+
 		// --- Drawing ---
 		rl.BeginDrawing()
 		rl.ClearBackground(colors.Background())
@@ -162,7 +184,9 @@ func main() {
 
 		rl.EndDrawing()
 	}
+}
 
+func shutdown() {
 	for _, connData := range database.DBConnections {
 		switch c := connData.Conn.(type) {
 		case *pgx.Conn:

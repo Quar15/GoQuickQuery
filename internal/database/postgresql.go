@@ -9,58 +9,59 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func queryRows(conn *pgx.Conn, query string) (data []map[string]any, headers []string, colsN int8, rowsN int32, err error) {
-	rows, err := conn.Query(context.Background(), query)
-	if err != nil {
-		slog.Error(fmt.Sprintf("Query failed: %s", query), slog.Any("error", err))
-		return nil, nil, 0, 0, err
-	}
-	defer rows.Close()
-
-	fieldDescriptions := rows.FieldDescriptions()
-	colsN = 0
-	columns := make([]string, len(fieldDescriptions))
-	for i, field := range fieldDescriptions {
-		columns[i] = string(field.Name)
-		colsN++
-	}
-
-	var results []map[string]any
-	rowsN = 0
-	for rows.Next() {
-		values, err := rows.Values()
-		if err != nil {
-			return nil, nil, -1, -1, err
-		}
-
-		rowMap := make(map[string]any)
-		for i, col := range values {
-			rowMap[columns[i]] = col
-		}
-
-		results = append(results, rowMap)
-		rowsN++
-	}
-
-	return results, columns, colsN, rowsN, nil
+type queryResult struct {
+	Results *DataGrid
+	Err     error
 }
 
-func QueryRows(conn *pgx.Conn, query string) (dg *DataGrid, err error) {
+func queryRows(ctx context.Context, conn *pgx.Conn, query string) (ch chan queryResult) {
+	ch = make(chan queryResult, 1)
+	go func() {
+		defer close(ch)
+
+		rows, err := conn.Query(ctx, query)
+		if err != nil {
+			slog.Error(fmt.Sprintf("Query failed: %s", query), slog.Any("error", err))
+			ch <- queryResult{nil, err}
+			return
+		}
+		defer rows.Close()
+
+		fieldDescriptions := rows.FieldDescriptions()
+		dg := &DataGrid{}
+		dg.Cols = 0
+		dg.Headers = make([]string, len(fieldDescriptions))
+		for i, field := range fieldDescriptions {
+			dg.Headers[i] = string(field.Name)
+			dg.Cols++
+		}
+
+		dg.Rows = 0
+		for rows.Next() {
+			values, err := rows.Values()
+			if err != nil {
+				ch <- queryResult{nil, err}
+				return
+			}
+
+			rowMap := make(map[string]any)
+			for i, col := range values {
+				rowMap[dg.Headers[i]] = col
+			}
+
+			dg.Data = append(dg.Data, rowMap)
+			dg.Rows++
+		}
+
+		ch <- queryResult{dg, nil}
+	}()
+
+	return ch
+}
+
+func QueryRows(ctx context.Context, conn *pgx.Conn, query string) chan queryResult {
 	// @TODO: Sanitize query to always limit number of results
-	data, headers, cols, rows, err := queryRows(conn, query)
-	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to execute query '%s'", query), slog.Any("error", err))
-		return nil, err
-	} else {
-		slog.Info("Query finished")
-		fmt.Printf("%+v\n", data)
-	}
-	dg = &DataGrid{}
-	dg.Data = data
-	dg.Headers = headers
-	dg.Cols = cols
-	dg.Rows = rows
-	return dg, nil
+	return queryRows(ctx, conn, query)
 }
 
 func ConnectToPostgres(connString string) (*pgx.Conn, error) {

@@ -1,7 +1,6 @@
 package display
 
 import (
-	"fmt"
 	"log/slog"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -47,33 +46,28 @@ func HandleSpreadsheetInput(z *Zone, dg *database.DataGrid, cursor *SpreadsheetC
 			case rl.IsKeyPressed(rl.KeyEnter):
 				// @TODO: Get query from editor (temp hard code)
 				query := "SELECT 1;"
-				newDg, err := database.QueryData("postgres", query)
+				// query = "SELECT pg_sleep(20)"
+				err := database.QueryData("postgres", query)
 				if err != nil {
 					slog.Error("Failed to execute query", slog.Any("error", err))
 					cursor.Logs.Channel <- "Failed to execute query (Something went wrong)"
-				} else {
-					*dg = *newDg
-					dg.UpdateColumnsWidth(appAssets)
-					utilities.DebugPrintMap(dg.Data)
-					cursor.Reset()
-					log_info := fmt.Sprintf("Querying '%s'", query)
-					slog.Info(log_info)
-					cursor.Logs.Channel <- log_info
 				}
 			case rl.IsKeyDown(rl.KeyC):
-				// @TODO: Add type specific formatting
-				var dataString string = ""
-				if cursor.Mode == ModeVisual || cursor.Mode == ModeVLine {
-					for row := cursor.SelectStartRow; row <= cursor.SelectEndRow; row++ {
-						for col := cursor.SelectStartCol; col < cursor.SelectEndCol; col++ {
-							dataString += utilities.GetValueAsString(dg.Data[row][dg.Headers[col]]) + ","
+				if cursor.Col >= 0 && dg.Cols > 0 {
+					// @TODO: Add type specific formatting
+					var dataString string = ""
+					if cursor.Mode == ModeVisual || cursor.Mode == ModeVLine {
+						for row := cursor.SelectStartRow; row <= cursor.SelectEndRow; row++ {
+							for col := cursor.SelectStartCol; col < cursor.SelectEndCol; col++ {
+								dataString += utilities.GetValueAsString(dg.Data[row][dg.Headers[col]]) + ","
+							}
+							dataString += utilities.GetValueAsString(dg.Data[row][dg.Headers[cursor.SelectEndCol]]) + "\n"
 						}
-						dataString += utilities.GetValueAsString(dg.Data[row][dg.Headers[cursor.SelectEndCol]]) + "\n"
+					} else {
+						dataString = utilities.GetValueAsString(dg.Data[cursor.Row][dg.Headers[cursor.Col]])
 					}
-				} else {
-					dataString = utilities.GetValueAsString(dg.Data[cursor.Row][dg.Headers[cursor.Col]])
+					clipboard.Write(clipboard.FmtText, []byte(dataString))
 				}
-				clipboard.Write(clipboard.FmtText, []byte(dataString))
 			}
 		} else {
 			var pageRows int8 = z.GetNumberOfVisibleRows(int32(cellHeight))

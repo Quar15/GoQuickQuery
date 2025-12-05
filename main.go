@@ -155,20 +155,28 @@ func main() {
 		// --- Querying ---
 
 		for _, connData := range database.DBConnections {
-			if connData.Conn == false || connData.ConnCtx == nil {
+			if connData.Conn == false || connData.ConnCtx == nil || connData.QueryChannel == nil {
 				continue
 			}
 			newDg, done, err := database.CheckForResult(*connData.ConnCtx, connData.QueryChannel, connData.Name)
 			if err != nil {
 				slog.Error("Something went wrong during query", slog.Any("error", err))
 				database.DBConnections[connData.Name].Conn = false
+				spreadsheetCursor.Logs.Channel <- fmt.Sprintf("'%s' cancelled after %s", connData.QueryText, connData.GetQueryRuntimeDynamicString())
 			} else if done == true {
-				dg = *newDg
-				dg.UpdateColumnsWidth(&appAssets)
-				utilities.DebugPrintMap(dg.Data)
-				spreadsheetCursor.Reset()
-				spreadsheetCursor.Logs.Channel <- fmt.Sprintf("'%s' finished", connData.QueryText)
-				// @TODO: Add system notification for query finish
+				slog.Debug("Query finished", slog.String("query", connData.QueryText), slog.Any("dg", newDg), slog.Any("error", err))
+				if newDg == nil {
+					spreadsheetCursor.Logs.Channel <- fmt.Sprintf("'%s' failed after %s", connData.QueryText, connData.GetQueryRuntimeDynamicString())
+				} else {
+					dg = *newDg
+					dg.UpdateColumnsWidth(&appAssets)
+					utilities.DebugPrintMap(dg.Data)
+					spreadsheetCursor.Reset()
+					spreadsheetCursor.Logs.Channel <- fmt.Sprintf("'%s' finished", connData.QueryText)
+					// @TODO: Add system notification for query finish
+				}
+			} else {
+				spreadsheetCursor.Logs.Channel <- fmt.Sprintf("'%s' running for %s", connData.QueryText, connData.GetQueryRuntimeDynamicString())
 			}
 		}
 

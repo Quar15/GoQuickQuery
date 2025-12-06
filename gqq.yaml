@@ -3,3 +3,11 @@ connections:
     driver: "postgres"
     timeout: 5
     conn: "postgres://postgres@127.0.0.1:5432/tmp"
+  - name: "postgres-2"
+    driver: "postgres"
+    timeout: 1800
+    conn: "postgres://postgres@127.0.0.1:5432/tmp"
+  - name: "postgres-3"
+    driver: "postgres"
+    timeout: 1800
+    conn: "postgres://postgres@127.0.0.1:5432/tmp"

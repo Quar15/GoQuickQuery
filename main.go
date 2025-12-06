@@ -12,34 +12,16 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/lmittmann/tint"
 	"golang.design/x/clipboard"
-	"gopkg.in/yaml.v3"
 
 	"github.com/quar15/qq-go/internal/assets"
 	"github.com/quar15/qq-go/internal/colors"
+	"github.com/quar15/qq-go/internal/config"
 	"github.com/quar15/qq-go/internal/database"
 	"github.com/quar15/qq-go/internal/display"
 	"github.com/quar15/qq-go/internal/utilities"
 )
 
-type Config struct {
-	Connections []database.ConnectionData `yaml:"connections"`
-}
-
-func loadConfig(path string) (*Config, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, err
-	}
-
-	return &cfg, nil
-}
-
-func initialize(cfg *Config) error {
+func initialize(cfg *config.Config) error {
 	slog.SetDefault(slog.New(
 		tint.NewHandler(os.Stdout, &tint.Options{
 			Level:      slog.LevelDebug,
@@ -57,7 +39,7 @@ func initialize(cfg *Config) error {
 }
 
 func main() {
-	cfg, err := loadConfig("./gqq.yaml")
+	cfg, err := config.LoadConfig("./gqq.yaml")
 	if err != nil {
 		slog.Error("Failed to read config", slog.Any("error", err))
 		os.Exit(1)
@@ -187,6 +169,7 @@ func main() {
 		topZone.Draw(&appAssets)
 		bottomZone.DrawSpreadsheetZone(&appAssets, &dg, &spreadsheetCursor)
 		commandZone.DrawCommandZone(&appAssets, &spreadsheetCursor)
+		display.DrawConnectionSelector(&appAssets, cfg, int32(screenWidth), int32(screenHeight))
 
 		rl.DrawRectangleRec(splitter.Rect, colors.Crust())
 

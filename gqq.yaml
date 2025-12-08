@@ -1,13 +1,29 @@
 connections:
   - name: "postgres"
-    driver: "postgres"
+    driver: "postgresql"
     timeout: 5
     conn: "postgres://postgres@127.0.0.1:5432/tmp"
   - name: "postgres-2"
-    driver: "postgres"
+    driver: "postgresql"
     timeout: 1800
     conn: "postgres://postgres@127.0.0.1:5432/tmp"
-  - name: "postgres-3"
-    driver: "postgres"
+  - name: "Postgres Local"
+    driver: "postgresql"
+    timeout: 1800
+    conn: "postgres://postgres@127.0.0.1:5432/tmp"
+  - name: "Postgres Local with very long name 2"
+    driver: "postgresql"
+    timeout: 1800
+    conn: "postgres://postgres@127.0.0.1:5432/tmp"
+  - name: "Postgres Local 3"
+    driver: "postgresql"
+    timeout: 1800
+    conn: "postgres://postgres@127.0.0.1:5432/tmp"
+  - name: "Postgres Local 4"
+    driver: "postgresql"
+    timeout: 1800
+    conn: "postgres://postgres@127.0.0.1:5432/tmp"
+  - name: "Postgres Local 5"
+    driver: "postgresql"
     timeout: 1800
     conn: "postgres://postgres@127.0.0.1:5432/tmp"

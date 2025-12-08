@@ -44,7 +44,7 @@ func QueryData(connectionKey string, query string) error {
 	}
 
 	switch connData.Driver {
-	case "postgres":
+	case "postgresql":
 		if err := InitPostgresConnection(connData); err != nil {
 			return err
 		}

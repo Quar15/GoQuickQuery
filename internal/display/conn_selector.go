@@ -11,18 +11,22 @@ import (
 func DrawConnectionSelector(appAssets *assets.Assets, config *config.Config, screenWidth int32, screenHeight int32) {
 	const boxWidth = 300
 	const selectionHeight = 30
-	const maxVisibleConnections = 5
+	const maxVisibleConnections int = 5
 	const textPadding int32 = 6
-	var bgColor rl.Color = colors.Background()
+	var bgColor rl.Color = colors.Mantle()
 
 	var x int32 = (screenWidth - boxWidth) / 2
-	var boxHeight int32 = int32(selectionHeight*(len(database.DBConnections))) + appAssets.MainFont.BaseSize/2 + selectionHeight/2
+	renderedConnectionsN := len(config.Connections)
+	if renderedConnectionsN > int(maxVisibleConnections) {
+		renderedConnectionsN = maxVisibleConnections
+	}
+	var boxHeight int32 = int32(selectionHeight*renderedConnectionsN) + appAssets.MainFont.BaseSize/2 + selectionHeight/2
 	var y int32 = (screenHeight - boxHeight) / 2
 
 	var boxRectangle rl.RectangleInt32 = rl.RectangleInt32{
 		X: x, Y: y, Width: boxWidth, Height: boxHeight,
 	}
-	const boxRoundness float32 = 0.2
+	const boxRoundness float32 = 0.05
 
 	boxRectangle.X -= appAssets.MainFont.BaseSize / 2
 	boxRectangle.Height += appAssets.MainFont.BaseSize
@@ -54,16 +58,43 @@ func DrawConnectionSelector(appAssets *assets.Assets, config *config.Config, scr
 		colors.Blue(),
 	)
 
+	const iconWidth int32 = 16
+	const iconHeight int32 = 16
+	const iconPadding int32 = textPadding * 2
+	const connNamePadding int32 = textPadding * 3
+	const connStatusCircleRadius float32 = 4
+	var maxNumberOfCharacters int32 = (boxWidth - iconPadding*2 - iconWidth - connNamePadding*2 - int32(connStatusCircleRadius)*2) / int32(appAssets.MainFontCharacterWidth)
 	var textTopPadding int32 = boxRectangle.Y + textPadding*2 + appAssets.MainFont.BaseSize/2
-	for _, conn := range config.Connections {
+	for i, conn := range config.Connections {
+		if i > renderedConnectionsN-1 {
+			break
+		}
+		var realConnection database.ConnectionData = *database.DBConnections[conn.Name]
+
+		var displayName = conn.Name
+		if len(displayName) > int(maxNumberOfCharacters) {
+			displayName = displayName[:maxNumberOfCharacters]
+		}
+		var connNameWidth float32 = appAssets.MeasureTextMainFont(displayName).X
 		appAssets.DrawTextMainFont(
-			conn.Name,
+			displayName,
 			rl.Vector2{
-				X: float32(boxRectangle.X + textPadding*2),
+				X: float32(boxRectangle.X + textPadding*3 + iconWidth),
 				Y: float32(textTopPadding),
 			},
 			colors.Text(),
 		)
+		rl.DrawTexturePro(
+			appAssets.Icons[conn.Driver],
+			rl.Rectangle{X: 0, Y: 0, Width: float32(iconWidth), Height: float32(iconHeight)},
+			rl.Rectangle{X: float32(boxRectangle.X + iconPadding), Y: float32(textTopPadding), Width: float32(iconWidth), Height: float32(iconHeight)},
+			rl.Vector2{X: 0, Y: 0},
+			0,
+			rl.White,
+		)
+		if realConnection.Conn != false {
+			rl.DrawCircle(boxRectangle.X+iconPadding+iconWidth+connNamePadding+int32(connNameWidth), textTopPadding+appAssets.MainFont.BaseSize/2, connStatusCircleRadius, colors.Green())
+		}
 		textTopPadding += appAssets.MainFont.BaseSize + textPadding*2
 	}
 	// @TODO: Highlight current connection

@@ -46,7 +46,8 @@ func HandleSpreadsheetInput(z *Zone, dg *database.DataGrid, cursor *SpreadsheetC
 			case rl.IsKeyPressed(rl.KeyEnter):
 				// @TODO: Get query from editor (temp hard code)
 				//query := "SELECT 1;"
-				query := "SELECT pg_sleep(20)"
+				//query := "SELECT pg_sleep(20)"
+				query := "SELECT * FROM example LIMIT 500;"
 				err := database.QueryData("postgres", query)
 				if err != nil {
 					slog.Error("Failed to execute query", slog.Any("error", err))

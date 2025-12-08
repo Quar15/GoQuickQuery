@@ -169,9 +169,10 @@ func main() {
 		topZone.Draw(&appAssets)
 		bottomZone.DrawSpreadsheetZone(&appAssets, &dg, &spreadsheetCursor)
 		commandZone.DrawCommandZone(&appAssets, &spreadsheetCursor)
-		display.DrawConnectionSelector(&appAssets, cfg, int32(screenWidth), int32(screenHeight))
 
 		rl.DrawRectangleRec(splitter.Rect, colors.Crust())
+
+		display.DrawConnectionSelector(&appAssets, cfg, int32(screenWidth), int32(screenHeight))
 
 		rl.EndDrawing()
 	}

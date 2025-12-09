@@ -62,27 +62,31 @@ func DrawConnectionSelector(appAssets *assets.Assets, config *config.Config, scr
 	const iconHeight int32 = 16
 	const iconPadding int32 = textPadding * 2
 	const connNamePadding int32 = textPadding * 3
-	const connStatusCircleRadius float32 = 4
+	const connStatusCircleRadius float32 = 2
 	var maxNumberOfCharacters int32 = (boxWidth - iconPadding*2 - iconWidth - connNamePadding*2 - int32(connStatusCircleRadius)*2) / int32(appAssets.MainFontCharacterWidth)
 	var textTopPadding int32 = boxRectangle.Y + textPadding*2 + appAssets.MainFont.BaseSize/2
-	for i, conn := range config.Connections {
-		if i > renderedConnectionsN-1 {
+	for i := CursorConnection.Position.Row; i < CursorConnection.Position.MaxRow; i++ {
+		if i > CursorConnection.Position.Row+int32(renderedConnectionsN-1) {
 			break
 		}
-		var realConnection database.ConnectionData = *database.DBConnections[conn.Name]
+		conn := config.Connections[i]
+		var realConnection *database.ConnectionData = database.DBConnections[conn.Name]
 
 		var displayName = conn.Name
 		if len(displayName) > int(maxNumberOfCharacters) {
 			displayName = displayName[:maxNumberOfCharacters]
 		}
-		var connNameWidth float32 = appAssets.MeasureTextMainFont(displayName).X
+		var connTextColor rl.Color = colors.Text()
+		if conn.Name == database.CurrDBConnection.Name {
+			connTextColor = colors.Blue()
+		}
 		appAssets.DrawTextMainFont(
 			displayName,
 			rl.Vector2{
 				X: float32(boxRectangle.X + textPadding*3 + iconWidth),
 				Y: float32(textTopPadding),
 			},
-			colors.Text(),
+			connTextColor,
 		)
 		rl.DrawTexturePro(
 			appAssets.Icons[conn.Driver],
@@ -93,7 +97,7 @@ func DrawConnectionSelector(appAssets *assets.Assets, config *config.Config, scr
 			rl.White,
 		)
 		if realConnection.Conn != false {
-			rl.DrawCircle(boxRectangle.X+iconPadding+iconWidth+connNamePadding+int32(connNameWidth), textTopPadding+appAssets.MainFont.BaseSize/2, connStatusCircleRadius, colors.Green())
+			rl.DrawCircle(boxRectangle.X+iconPadding+iconWidth, textTopPadding+iconHeight, connStatusCircleRadius, colors.Green())
 		}
 		textTopPadding += appAssets.MainFont.BaseSize + textPadding*2
 	}

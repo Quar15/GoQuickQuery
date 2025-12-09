@@ -38,6 +38,69 @@ func initialize(cfg *config.Config) error {
 	return nil
 }
 
+func handleDropFiles(appAssets *assets.Assets, cursor *display.Cursor, dg *database.DataGrid) {
+	if rl.IsFileDropped() {
+		droppedFilesPaths := rl.LoadDroppedFiles()
+		// @TODO: Extend to handle every file if tabs are added
+		if len(droppedFilesPaths) > 1 {
+			slog.Warn("Tried to load more than one file")
+		}
+		ext := filepath.Ext(droppedFilesPaths[0])
+		switch ext {
+		case ".sql":
+			slog.Info("Loaded sql file")
+			// @TODO: Pass file to editor
+		case ".csv":
+			slog.Info("Loaded csv file")
+			newDg, err := database.LoadDataGridFromCSV(droppedFilesPaths[0], appAssets)
+			if err != nil {
+				slog.Error("Failed to load file", slog.Any("path", droppedFilesPaths[0]))
+				dg = &database.DataGrid{} // @TODO: Consider using tmp variable to not stain already loaded data
+				cursor.Common.Logs.Channel <- fmt.Sprintf("ERR: Failed to parse csv file '%s'", droppedFilesPaths[0])
+			} else {
+				*dg = *newDg
+				dg.UpdateColumnsWidth(appAssets)
+				cursor.Handler.Reset(cursor)
+				display.CursorSpreadsheet.Position.MaxCol = dg.Cols - 1
+				display.CursorSpreadsheet.Position.MaxRow = dg.Rows - 1
+				cursor.Common.Logs.Channel <- fmt.Sprintf("Loaded csv file '%s'", droppedFilesPaths[0])
+			}
+		default:
+			slog.Warn("Unhandled type of file", slog.String("extension", ext))
+		}
+	}
+}
+
+func handleQuery(appAssets *assets.Assets, cursor *display.Cursor, dg *database.DataGrid) {
+	for _, connData := range database.DBConnections {
+		if connData.Conn == false || connData.ConnCtx == nil || connData.QueryChannel == nil {
+			continue
+		}
+		newDg, done, err := database.CheckForResult(*connData.ConnCtx, connData.QueryChannel, connData.Name)
+		if err != nil {
+			slog.Error("Something went wrong during query", slog.Any("error", err))
+			database.DBConnections[connData.Name].Conn = false
+			cursor.Common.Logs.Channel <- fmt.Sprintf("'%s' cancelled after %s", connData.QueryText, connData.GetQueryRuntimeDynamicString())
+		} else if done == true {
+			slog.Debug("Query finished", slog.String("query", connData.QueryText), slog.Any("dg", newDg), slog.Any("error", err))
+			if newDg == nil {
+				cursor.Common.Logs.Channel <- fmt.Sprintf("'%s' failed after %s", connData.QueryText, connData.GetQueryRuntimeDynamicString())
+			} else {
+				*dg = *newDg
+				dg.UpdateColumnsWidth(appAssets)
+				utilities.DebugPrintMap(dg.Data)
+				cursor.Handler.Reset(cursor)
+				display.CursorSpreadsheet.Position.MaxCol = dg.Cols
+				display.CursorSpreadsheet.Position.MaxRow = dg.Rows
+				cursor.Common.Logs.Channel <- fmt.Sprintf("'%s' finished", connData.QueryText)
+				// @TODO: Add system notification for query finish
+			}
+		} else {
+			cursor.Common.Logs.Channel <- fmt.Sprintf("'%s' running for %s", connData.QueryText, connData.GetQueryRuntimeDynamicString())
+		}
+	}
+}
+
 func main() {
 	cfg, err := config.LoadConfig("./gqq.yaml")
 	if err != nil {
@@ -48,8 +111,6 @@ func main() {
 	if err != nil {
 		panic("Failed to initialize")
 	}
-	var spreadsheetCursor display.SpreadsheetCursor
-	spreadsheetCursor.Init()
 	defer shutdown()
 
 	// --- Init Window ---
@@ -76,6 +137,11 @@ func main() {
 	var topZone display.Zone
 	var bottomZone display.Zone
 	var commandZone display.Zone
+
+	display.CursorEditor.Handler.Init(display.CursorEditor, &topZone)
+	display.CursorSpreadsheet.Handler.Init(display.CursorSpreadsheet, &bottomZone)
+	display.CursorConnection.Handler.Init(display.CursorConnection, nil)
+	display.CurrCursor = display.CursorSpreadsheet
 
 	topZone.ContentSize = rl.Vector2{X: 1600, Y: 1200}
 	bottomZone.ContentSize = rl.Vector2{X: 2000, Y: 2000}
@@ -106,73 +172,23 @@ func main() {
 		topZone.UpdateZoneScroll()
 		bottomZone.UpdateZoneScroll()
 
-		// --- Dropping files ---
-		if rl.IsFileDropped() {
-			droppedFilesPaths := rl.LoadDroppedFiles()
-			// @TODO: Extend to handle every file if tabs are added
-			if len(droppedFilesPaths) > 1 {
-				slog.Warn("Tried to load more than one file")
-			}
-			ext := filepath.Ext(droppedFilesPaths[0])
-			switch ext {
-			case ".sql":
-				slog.Info("Loaded sql file")
-				// @TODO: Pass file to editor
-			case ".csv":
-				slog.Info("Loaded csv file")
-				dg, err = database.LoadDataGridFromCSV(droppedFilesPaths[0], &appAssets)
-				if err != nil {
-					slog.Error("Failed to load file", slog.Any("path", droppedFilesPaths[0]))
-					dg = database.DataGrid{} // @TODO: Consider using tmp variable to not stain already loaded data
-					spreadsheetCursor.Logs.Channel <- fmt.Sprintf("ERR: Failed to parse csv file '%s'", droppedFilesPaths[0])
-				} else {
-					spreadsheetCursor.Logs.Channel <- fmt.Sprintf("Loaded csv file '%s'", droppedFilesPaths[0])
-				}
-				spreadsheetCursor.Reset()
-			default:
-				slog.Warn("Unhandled type of file", slog.String("extension", ext))
-			}
-		}
-
-		// --- Querying ---
-
-		for _, connData := range database.DBConnections {
-			if connData.Conn == false || connData.ConnCtx == nil || connData.QueryChannel == nil {
-				continue
-			}
-			newDg, done, err := database.CheckForResult(*connData.ConnCtx, connData.QueryChannel, connData.Name)
-			if err != nil {
-				slog.Error("Something went wrong during query", slog.Any("error", err))
-				database.DBConnections[connData.Name].Conn = false
-				spreadsheetCursor.Logs.Channel <- fmt.Sprintf("'%s' cancelled after %s", connData.QueryText, connData.GetQueryRuntimeDynamicString())
-			} else if done == true {
-				slog.Debug("Query finished", slog.String("query", connData.QueryText), slog.Any("dg", newDg), slog.Any("error", err))
-				if newDg == nil {
-					spreadsheetCursor.Logs.Channel <- fmt.Sprintf("'%s' failed after %s", connData.QueryText, connData.GetQueryRuntimeDynamicString())
-				} else {
-					dg = *newDg
-					dg.UpdateColumnsWidth(&appAssets)
-					utilities.DebugPrintMap(dg.Data)
-					spreadsheetCursor.Reset()
-					spreadsheetCursor.Logs.Channel <- fmt.Sprintf("'%s' finished", connData.QueryText)
-					// @TODO: Add system notification for query finish
-				}
-			} else {
-				spreadsheetCursor.Logs.Channel <- fmt.Sprintf("'%s' running for %s", connData.QueryText, connData.GetQueryRuntimeDynamicString())
-			}
-		}
+		handleDropFiles(&appAssets, display.CurrCursor, &dg)
+		handleQuery(&appAssets, display.CurrCursor, &dg)
+		display.CurrCursor.Handler.HandleInput(&appAssets, &dg, display.CurrCursor)
 
 		// --- Drawing ---
 		rl.BeginDrawing()
 		rl.ClearBackground(colors.Background())
 
 		topZone.Draw(&appAssets)
-		bottomZone.DrawSpreadsheetZone(&appAssets, &dg, &spreadsheetCursor)
-		commandZone.DrawCommandZone(&appAssets, &spreadsheetCursor)
+		bottomZone.DrawSpreadsheetZone(&appAssets, &dg, display.CursorSpreadsheet)
+		commandZone.DrawCommandZone(&appAssets, display.CurrCursor)
 
 		rl.DrawRectangleRec(splitter.Rect, colors.Crust())
 
-		display.DrawConnectionSelector(&appAssets, cfg, int32(screenWidth), int32(screenHeight))
+		if display.CurrCursor.Type == display.CursorTypeConnections {
+			display.DrawConnectionSelector(&appAssets, cfg, int32(screenWidth), int32(screenHeight))
+		}
 
 		rl.EndDrawing()
 	}

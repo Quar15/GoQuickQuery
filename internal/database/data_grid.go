@@ -50,18 +50,18 @@ func (dg *DataGrid) UpdateColumnsWidth(appAssets *assets.Assets) {
 	}
 }
 
-func LoadDataGridFromCSV(path string, appAssets *assets.Assets) (DataGrid, error) {
-	var dg DataGrid
+func LoadDataGridFromCSV(path string, appAssets *assets.Assets) (*DataGrid, error) {
+	var dg *DataGrid = &DataGrid{}
 	f, err := os.Open(path)
 	if err != nil {
-		return dg, err
+		return nil, err
 	}
 	defer f.Close()
 
 	csvReader := csv.NewReader(f)
 	dg.Headers, err = csvReader.Read()
 	if err != nil {
-		return dg, err
+		return nil, err
 	}
 	dg.Cols = int8(len(dg.Headers))
 
@@ -73,7 +73,7 @@ func LoadDataGridFromCSV(path string, appAssets *assets.Assets) (DataGrid, error
 			if err.Error() == "EOF" {
 				break
 			}
-			return dg, errors.New("Failed to parse provided CSV")
+			return nil, errors.New("Failed to parse provided CSV")
 		}
 		newData := make(map[string]any)
 		for i, key := range dg.Headers {

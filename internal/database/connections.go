@@ -10,6 +10,7 @@ import (
 )
 
 var DBConnections map[string]*ConnectionData = make(map[string]*ConnectionData)
+var CurrDBConnection *ConnectionData
 
 type ConnectionData struct {
 	Name                string             `yaml:"name"`
@@ -25,10 +26,15 @@ type ConnectionData struct {
 }
 
 func InitializeConnections(connections []ConnectionData) {
+	if len(connections) == 0 {
+		slog.Error("No connections initialized")
+		return
+	}
 	for _, c := range connections {
 		c.Conn = false
 		DBConnections[c.Name] = &c
 	}
+	CurrDBConnection = &connections[0]
 }
 
 func QueryData(connectionKey string, query string) error {

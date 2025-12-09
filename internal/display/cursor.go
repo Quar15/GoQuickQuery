@@ -5,7 +5,9 @@ import (
 	"strconv"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"github.com/quar15/qq-go/internal/assets"
 	"github.com/quar15/qq-go/internal/colors"
+	"github.com/quar15/qq-go/internal/database"
 	"github.com/quar15/qq-go/internal/utilities"
 )
 
@@ -43,11 +45,7 @@ func (cm CursorMode) Color() rl.Color {
 	return modeColor[cm]
 }
 
-type SpreadsheetCursor struct {
-	Mode            CursorMode
-	CmdBuf          string
-	MotionBuf       string
-	Logs            CommandLogs
+type CursorPosition struct {
 	Col             int8
 	Row             int32
 	MaxCol          int8
@@ -60,101 +58,164 @@ type SpreadsheetCursor struct {
 	SelectAnchorRow int32
 }
 
-func (c *SpreadsheetCursor) TransitionMode(newMode CursorMode) {
-	c.Mode = newMode
-}
-
-func (c *SpreadsheetCursor) Reset() {
-	c.TransitionMode(ModeNormal)
+func (c *CursorPosition) Reset() {
 	c.SelectStartCol = -1
 	c.SelectStartRow = -1
 	c.SelectEndCol = -1
 	c.SelectEndRow = -1
-	c.CmdBuf = ""
-	c.MotionBuf = ""
-	c.UpdateCmdLine()
 }
 
-func (c *SpreadsheetCursor) Init() {
+func (c *CursorPosition) Init() {
 	c.Col = 0
 	c.Row = 0
-	c.Logs.Init()
 	c.Reset()
 }
 
-func (c *SpreadsheetCursor) SetSelect(startCol int8, startRow int32, endCol int8, endRow int32) {
-	c.SelectStartCol = startCol
-	c.SelectStartRow = startRow
-	c.SelectEndCol = endCol
-	c.SelectEndRow = endRow
-	c.SelectAnchorCol = startCol
-	c.SelectAnchorRow = startRow
-	if c.Mode != ModeVisual {
+type CursorCommon struct {
+	Mode      CursorMode
+	CmdBuf    string
+	MotionBuf string
+	Logs      CommandLogs
+}
+
+type CursorHandler interface {
+	HandleInput(appAssets *assets.Assets, dg *database.DataGrid, cursor *Cursor)
+	Reset(c *Cursor)
+	Init(c *Cursor, z *Zone)
+}
+
+type CursorType int8
+
+const (
+	CursorTypeEditor CursorType = iota
+	CursorTypeSpreadsheet
+	CursorTypeConnections
+)
+
+type Cursor struct {
+	Common   *CursorCommon
+	Position CursorPosition
+	Handler  CursorHandler
+	Type     CursorType
+	Zone     *Zone
+}
+
+var cursorCommon *CursorCommon = &CursorCommon{}
+var CursorSpreadsheet *Cursor = &Cursor{
+	Common:   cursorCommon,
+	Position: CursorPosition{},
+	Handler:  SpreadsheetCursorStateHandler{},
+	Type:     CursorTypeSpreadsheet,
+}
+var CursorConnection *Cursor = &Cursor{
+	Common:   cursorCommon,
+	Position: CursorPosition{},
+	Handler:  ConnectionsCursorStateHandler{},
+	Type:     CursorTypeConnections,
+}
+var CursorEditor *Cursor = &Cursor{
+	Common:   cursorCommon,
+	Position: CursorPosition{},
+	Handler:  EditorCursorStateHandler{},
+	Type:     CursorTypeEditor,
+}
+var CurrCursor *Cursor
+
+type BaseCursorHandler struct{}
+
+func (BaseCursorHandler) HandleInput(c *Cursor) {}
+func (BaseCursorHandler) Reset(c *Cursor) {
+	c.TransitionMode(ModeNormal)
+	c.Position.Reset()
+	c.Common.CmdBuf = ""
+	c.Common.MotionBuf = ""
+	c.UpdateCmdLine()
+}
+func (BaseCursorHandler) Init(c *Cursor, z *Zone) {
+	c.Position.Col = 0
+	c.Position.Row = 0
+	c.Common.Logs.Init()
+	c.Handler.Reset(c)
+	c.Zone = z
+}
+
+func (c *Cursor) TransitionMode(newMode CursorMode) {
+	c.Common.Mode = newMode
+}
+
+func (c *Cursor) SetSelect(startCol int8, startRow int32, endCol int8, endRow int32) {
+	c.Position.SelectStartCol = startCol
+	c.Position.SelectStartRow = startRow
+	c.Position.SelectEndCol = endCol
+	c.Position.SelectEndRow = endRow
+	c.Position.SelectAnchorCol = startCol
+	c.Position.SelectAnchorRow = startRow
+	if c.Common.Mode != ModeVisual {
 		c.TransitionMode(ModeVisual)
 	}
 }
 
-func (c *SpreadsheetCursor) UpdateSelectBasedOnPosition() {
-	switch c.Mode {
+func (c *Cursor) UpdateSelectBasedOnPosition() {
+	switch c.Common.Mode {
 	case ModeVisual:
-		if c.Col < c.SelectAnchorCol {
-			c.SelectStartCol = c.Col
-			c.SelectEndCol = c.SelectAnchorCol
-		} else if c.Col > c.SelectAnchorCol {
-			c.SelectStartCol = c.SelectAnchorCol
-			c.SelectEndCol = c.Col
+		if c.Position.Col < c.Position.SelectAnchorCol {
+			c.Position.SelectStartCol = c.Position.Col
+			c.Position.SelectEndCol = c.Position.SelectAnchorCol
+		} else if c.Position.Col > c.Position.SelectAnchorCol {
+			c.Position.SelectStartCol = c.Position.SelectAnchorCol
+			c.Position.SelectEndCol = c.Position.Col
 		} else {
-			c.SelectStartCol = c.SelectAnchorCol
-			c.SelectEndCol = c.SelectAnchorCol
+			c.Position.SelectStartCol = c.Position.SelectAnchorCol
+			c.Position.SelectEndCol = c.Position.SelectAnchorCol
 		}
 
-		if c.Row < c.SelectAnchorRow {
-			c.SelectStartRow = c.Row
-			c.SelectEndRow = c.SelectAnchorRow
-		} else if c.Row > c.SelectAnchorRow {
-			c.SelectStartRow = c.SelectAnchorRow
-			c.SelectEndRow = c.Row
+		if c.Position.Row < c.Position.SelectAnchorRow {
+			c.Position.SelectStartRow = c.Position.Row
+			c.Position.SelectEndRow = c.Position.SelectAnchorRow
+		} else if c.Position.Row > c.Position.SelectAnchorRow {
+			c.Position.SelectStartRow = c.Position.SelectAnchorRow
+			c.Position.SelectEndRow = c.Position.Row
 		} else {
-			c.SelectStartRow = c.SelectAnchorRow
-			c.SelectEndRow = c.SelectAnchorRow
+			c.Position.SelectStartRow = c.Position.SelectAnchorRow
+			c.Position.SelectEndRow = c.Position.SelectAnchorRow
 		}
 	case ModeVLine:
-		if c.Row < c.SelectAnchorRow {
-			c.SelectStartRow = c.Row
-			c.SelectEndRow = c.SelectAnchorRow
-		} else if c.Row > c.SelectAnchorRow {
-			c.SelectStartRow = c.SelectAnchorRow
-			c.SelectEndRow = c.Row
+		if c.Position.Row < c.Position.SelectAnchorRow {
+			c.Position.SelectStartRow = c.Position.Row
+			c.Position.SelectEndRow = c.Position.SelectAnchorRow
+		} else if c.Position.Row > c.Position.SelectAnchorRow {
+			c.Position.SelectStartRow = c.Position.SelectAnchorRow
+			c.Position.SelectEndRow = c.Position.Row
 		} else {
-			c.SelectStartRow = c.SelectAnchorRow
-			c.SelectEndRow = c.SelectAnchorRow
+			c.Position.SelectStartRow = c.Position.SelectAnchorRow
+			c.Position.SelectEndRow = c.Position.SelectAnchorRow
 		}
 	}
 }
 
-func (c *SpreadsheetCursor) IsFocused(col int8, row int32) bool {
-	return c.Col == col && c.Row == row
+func (c *Cursor) IsFocused(col int8, row int32) bool {
+	return c.Position.Col == col && c.Position.Row == row
 }
 
-func (c *SpreadsheetCursor) ClampFocus(limitCol int8, limitRow int32) {
-	c.MaxCol = limitCol
-	c.MaxRow = limitRow
-	c.Col = min(max(0, c.Col), c.MaxCol)
-	c.Row = min(max(0, c.Row), c.MaxRow)
-	if c.Mode == ModeVisual {
-		c.SelectStartCol = min(max(0, c.SelectStartCol), c.MaxCol)
-		c.SelectEndCol = min(max(0, c.SelectEndCol), c.MaxCol)
-		c.SelectStartRow = min(max(0, c.SelectStartRow), c.MaxRow)
-		c.SelectEndRow = min(max(0, c.SelectEndRow), c.MaxRow)
+func (c *Cursor) ClampFocus(limitCol int8, limitRow int32) {
+	c.Position.MaxCol = limitCol
+	c.Position.MaxRow = limitRow
+	c.Position.Col = min(max(0, c.Position.Col), c.Position.MaxCol)
+	c.Position.Row = min(max(0, c.Position.Row), c.Position.MaxRow)
+	if c.Common.Mode == ModeVisual {
+		c.Position.SelectStartCol = min(max(0, c.Position.SelectStartCol), c.Position.MaxCol)
+		c.Position.SelectEndCol = min(max(0, c.Position.SelectEndCol), c.Position.MaxCol)
+		c.Position.SelectStartRow = min(max(0, c.Position.SelectStartRow), c.Position.MaxRow)
+		c.Position.SelectEndRow = min(max(0, c.Position.SelectEndRow), c.Position.MaxRow)
 	}
 }
 
-func (c *SpreadsheetCursor) IsSelected(col int8, row int32) bool {
-	if c.Mode != ModeVisual && c.Mode != ModeVLine {
+func (c *Cursor) IsSelected(col int8, row int32) bool {
+	if c.Common.Mode != ModeVisual && c.Common.Mode != ModeVLine {
 		return false
 	}
 
-	return col >= c.SelectStartCol && col <= c.SelectEndCol && row >= c.SelectStartRow && row <= c.SelectEndRow
+	return col >= c.Position.SelectStartCol && col <= c.Position.SelectEndCol && row >= c.Position.SelectStartRow && row <= c.Position.SelectEndRow
 }
 
 var HANDLED_MOTION_KEY_CODES []int = []int{
@@ -164,76 +225,101 @@ var HANDLED_MOTION_KEY_CODES []int = []int{
 	rl.KeyG, utilities.KeySmallG,
 }
 
-func (c *SpreadsheetCursor) AppendMotion(char rune) {
-	c.MotionBuf += string(char)
+func (c *Cursor) AppendMotion(char rune) {
+	c.Common.MotionBuf += string(char)
 	c.CheckForMotion()
 }
 
-func (c *SpreadsheetCursor) CheckForMotion() {
+func (c *Cursor) CheckForMotion() {
 	motionExecuted := false
-	switch c.MotionBuf {
+	switch c.Common.MotionBuf {
 	case "j":
-		c.Row++
+		c.Position.Row++
 		motionExecuted = true
 	case "k":
-		c.Row--
+		c.Position.Row--
 		motionExecuted = true
 	case "h":
-		c.Col--
+		c.Position.Col--
 		motionExecuted = true
 	case "l":
-		c.Col++
+		c.Position.Col++
 		motionExecuted = true
 	case "G":
-		c.Row = c.MaxRow
+		c.Position.Row = c.Position.MaxRow
 		motionExecuted = true
 	case "gg":
-		c.Row = 0
+		c.Position.Row = 0
 		motionExecuted = true
 	case "V":
-		c.SetSelect(0, c.Row, c.MaxCol, c.Row)
+		c.SetSelect(0, c.Position.Row, c.Position.MaxCol, c.Position.Row)
 		c.TransitionMode(ModeVLine)
 		motionExecuted = true
 	case "v":
-		c.SetSelect(c.Col, c.Row, c.Col, c.Row)
+		c.SetSelect(c.Position.Col, c.Position.Row, c.Position.Col, c.Position.Row)
 		motionExecuted = true
 	default:
 		var motionRe = regexp.MustCompile(`^([0-9]+)([hjklG])$`)
-		match := motionRe.FindStringSubmatch(c.MotionBuf)
+		match := motionRe.FindStringSubmatch(c.Common.MotionBuf)
 		if match != nil {
 			num, _ := strconv.Atoi(match[1])
 			cmd := match[2]
 			switch cmd {
 			case "j":
-				c.Row += int32(num)
+				c.Position.Row += int32(num)
 				motionExecuted = true
 			case "k":
-				c.Row -= int32(num)
+				c.Position.Row -= int32(num)
 				motionExecuted = true
 			case "h":
-				c.Col -= int8(num)
+				c.Position.Col -= int8(num)
 				motionExecuted = true
 			case "l":
-				c.Col += int8(num)
+				c.Position.Col += int8(num)
 				motionExecuted = true
 			case "G":
-				c.Row = int32(num - 1)
+				c.Position.Row = int32(num - 1)
 				motionExecuted = true
 			}
 		}
 	}
 
 	if motionExecuted {
-		c.MotionBuf = ""
+		c.Common.MotionBuf = ""
 	}
 }
 
-func (c *SpreadsheetCursor) UpdateCmdLine() {
-	c.Logs.Channel <- c.CmdBuf
+func (c *Cursor) UpdateCmdLine() {
+	c.Common.Logs.Channel <- c.Common.CmdBuf
 }
 
-func (c *SpreadsheetCursor) ExecuteCommand() {
-	c.Logs.Channel <- "Executed command"
-	c.CmdBuf = "Executed"
-	c.Mode = ModeNormal
+func (c *Cursor) ExecuteCommand() {
+	// @TODO
+	c.Common.Logs.Channel <- "Executed command"
+	c.Common.CmdBuf = "Executed"
+	c.Common.Mode = ModeNormal
 }
+
+type SpreadsheetCursorStateHandler struct {
+	BaseCursorHandler
+}
+
+type ConnectionsCursorStateHandler struct {
+	BaseCursorHandler
+}
+
+func (ConnectionsCursorStateHandler) Init(c *Cursor, z *Zone) {
+	c.Position.Col = 0
+	c.Position.Row = 0
+	c.Common.Logs.Init()
+	c.Handler.Reset(c)
+	c.Position.MaxCol = 0
+	c.Position.MaxRow = int32(len(database.DBConnections))
+	c.Zone = z
+}
+
+type EditorCursorStateHandler struct {
+	BaseCursorHandler
+}
+
+// Handling input for handlers in internal/display/input.go

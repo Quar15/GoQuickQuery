@@ -15,7 +15,7 @@ func (z *Zone) GetNumberOfVisibleRows(cellHeight int32) int8 {
 	return int8(availableContentSpaceHeight / cellHeight)
 }
 
-func (z *Zone) DrawSpreadsheetZone(appAssets *assets.Assets, dg *database.DataGrid, cursor *SpreadsheetCursor) {
+func (z *Zone) DrawSpreadsheetZone(appAssets *assets.Assets, dg *database.DataGrid, cursor *Cursor) {
 	// @TODO: Consider approach with RenderTexture2D for performance
 	var mouse rl.Vector2 = rl.GetMousePosition()
 
@@ -32,9 +32,9 @@ func (z *Zone) DrawSpreadsheetZone(appAssets *assets.Assets, dg *database.DataGr
 	}
 
 	// Update scroll based on cursor
-	z.Scroll.Y = float32(cellHeight * int(cursor.Row))
+	z.Scroll.Y = float32(cellHeight * int(cursor.Position.Row))
 	z.Scroll.X = 0
-	for col := int8(0); col < cursor.Col; col++ {
+	for col := int8(0); col < cursor.Position.Col; col++ {
 		z.Scroll.X += float32(dg.ColumnsWidth[col])
 	}
 	z.ClampScrollsToZoneSize()
@@ -43,7 +43,6 @@ func (z *Zone) DrawSpreadsheetZone(appAssets *assets.Assets, dg *database.DataGr
 	var firstVisibleRowToScrollIndex int32 = min(max(int32(z.Scroll.Y)/int32(cellHeight), 0), dg.Rows) // Swapping screens creates weird behavior
 	var lastRowToRender = min(dg.Rows, firstVisibleRowToScrollIndex+int32(rowsToRender))
 
-	HandleSpreadsheetInput(z, dg, cursor, appAssets, int32(cellHeight))
 	rl.BeginScissorMode(int32(z.Bounds.X), int32(z.Bounds.Y), int32(z.Bounds.Width), int32(z.Bounds.Height))
 
 	for row := firstVisibleRowToScrollIndex; row < lastRowToRender; row++ {
@@ -69,8 +68,8 @@ func (z *Zone) DrawSpreadsheetZone(appAssets *assets.Assets, dg *database.DataGr
 			rl.DrawRectangleRec(cellRect.ToFloat32(), cellBackgroundColor)
 			if rl.CheckCollisionPointRec(mouse, cellRect.ToFloat32()) {
 				if rl.IsMouseButtonPressed(rl.MouseButtonLeft) {
-					cursor.Col = int8(c)
-					cursor.Row = row
+					cursor.Position.Col = int8(c)
+					cursor.Position.Row = row
 				}
 			}
 			cellText := utilities.GetValueAsString(val)

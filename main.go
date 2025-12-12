@@ -107,6 +107,7 @@ func main() {
 		slog.Error("Failed to read config", slog.Any("error", err))
 		os.Exit(1)
 	}
+	*config.Cfg = *cfg
 	err = initialize(cfg)
 	if err != nil {
 		panic("Failed to initialize")
@@ -137,15 +138,17 @@ func main() {
 	var topZone display.Zone
 	var bottomZone display.Zone
 	var commandZone display.Zone
+	var connectionsZone display.Zone
 
 	display.CursorEditor.Handler.Init(display.CursorEditor, &topZone)
 	display.CursorSpreadsheet.Handler.Init(display.CursorSpreadsheet, &bottomZone)
-	display.CursorConnection.Handler.Init(display.CursorConnection, nil)
+	display.CursorConnection.Handler.Init(display.CursorConnection, &connectionsZone)
 	display.CurrCursor = display.CursorSpreadsheet
 
 	topZone.ContentSize = rl.Vector2{X: 1600, Y: 1200}
 	bottomZone.ContentSize = rl.Vector2{X: 2000, Y: 2000}
 	commandZone.ContentSize = rl.Vector2{X: 0, Y: 0}
+	connectionsZone.ContentSize = rl.Vector2{X: 0, Y: 0}
 	var commandZoneHeight float32 = (appAssets.MainFontSize*2 + appAssets.MainFontSpacing*2)
 
 	var dg database.DataGrid
@@ -187,7 +190,7 @@ func main() {
 		rl.DrawRectangleRec(splitter.Rect, colors.Crust())
 
 		if display.CurrCursor.Type == display.CursorTypeConnections {
-			display.DrawConnectionSelector(&appAssets, cfg, int32(screenWidth), int32(screenHeight))
+			connectionsZone.DrawConnectionSelector(&appAssets, cfg, display.CursorConnection, int32(screenWidth), int32(screenHeight))
 		}
 
 		rl.EndDrawing()

@@ -314,7 +314,7 @@ func (ConnectionsCursorStateHandler) Init(c *Cursor, z *Zone) {
 	c.Common.Logs.Init()
 	c.Handler.Reset(c)
 	c.Position.MaxCol = 0
-	c.Position.MaxRow = int32(len(database.DBConnections))
+	c.Position.MaxRow = int32(len(database.DBConnections))-1
 	c.Zone = z
 }
 

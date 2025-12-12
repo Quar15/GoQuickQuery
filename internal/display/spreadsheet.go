@@ -39,7 +39,7 @@ func (z *Zone) DrawSpreadsheetZone(appAssets *assets.Assets, dg *database.DataGr
 	}
 	z.ClampScrollsToZoneSize()
 
-	var rowsToRender int8 = z.GetNumberOfVisibleRows(int32(cellHeight)) + 2
+	var rowsToRender int8 = z.GetNumberOfVisibleRows(int32(cellHeight)) + 1
 	var firstVisibleRowToScrollIndex int32 = min(max(int32(z.Scroll.Y)/int32(cellHeight), 0), dg.Rows) // Swapping screens creates weird behavior
 	var lastRowToRender = min(dg.Rows, firstVisibleRowToScrollIndex+int32(rowsToRender))
 

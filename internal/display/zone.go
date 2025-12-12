@@ -39,17 +39,17 @@ func (z *Zone) Draw(appAssets *assets.Assets) {
 }
 
 func (z *Zone) ClampScrollsToZoneSize() {
-	if z.Scroll.X < 0 {
-		z.Scroll.X = 0
-	}
-	if z.Scroll.Y < 0 {
-		z.Scroll.Y = 0
-	}
 	if z.Scroll.X > z.ContentSize.X-float32(z.Bounds.Width) {
 		z.Scroll.X = z.ContentSize.X - float32(z.Bounds.Width)
 	}
 	if z.Scroll.Y > z.ContentSize.Y-float32(z.Bounds.Height) {
 		z.Scroll.Y = z.ContentSize.Y - float32(z.Bounds.Height)
+	}
+	if z.Scroll.X < 0 {
+		z.Scroll.X = 0
+	}
+	if z.Scroll.Y < 0 {
+		z.Scroll.Y = 0
 	}
 }
 

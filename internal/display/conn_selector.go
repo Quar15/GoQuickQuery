@@ -8,11 +8,11 @@ import (
 	"github.com/quar15/qq-go/internal/database"
 )
 
-func DrawConnectionSelector(appAssets *assets.Assets, config *config.Config, screenWidth int32, screenHeight int32) {
+func (z *Zone) DrawConnectionSelector(appAssets *assets.Assets, config *config.Config, cursor *Cursor, screenWidth int32, screenHeight int32) {
 	const boxWidth = 300
-	const selectionHeight = 30
 	const maxVisibleConnections int = 5
 	const textPadding int32 = 6
+	var cellHeight = appAssets.MainFont.BaseSize + textPadding*2
 	var bgColor rl.Color = colors.Mantle()
 
 	var x int32 = (screenWidth - boxWidth) / 2
@@ -20,7 +20,7 @@ func DrawConnectionSelector(appAssets *assets.Assets, config *config.Config, scr
 	if renderedConnectionsN > int(maxVisibleConnections) {
 		renderedConnectionsN = maxVisibleConnections
 	}
-	var boxHeight int32 = int32(selectionHeight*renderedConnectionsN) + appAssets.MainFont.BaseSize/2 + selectionHeight/2
+	var boxHeight int32 = cellHeight*int32(renderedConnectionsN) + appAssets.MainFont.BaseSize/2 + cellHeight/2
 	var y int32 = (screenHeight - boxHeight) / 2
 
 	var boxRectangle rl.RectangleInt32 = rl.RectangleInt32{
@@ -37,6 +37,7 @@ func DrawConnectionSelector(appAssets *assets.Assets, config *config.Config, scr
 		0.0,
 		bgColor,
 	)
+
 	boxRectangle.Y += appAssets.MainFont.BaseSize / 2
 	boxRectangle.X += appAssets.MainFont.BaseSize / 2
 	boxRectangle.Height -= appAssets.MainFont.BaseSize
@@ -58,17 +59,36 @@ func DrawConnectionSelector(appAssets *assets.Assets, config *config.Config, scr
 		colors.Blue(),
 	)
 
+	const initialSelectionsTopPadding float32 = 20
+	z.Bounds = boxRectangle.ToFloat32()
+	z.Bounds.Y += initialSelectionsTopPadding
+	z.Bounds.Height = float32(maxVisibleConnections * int(cellHeight))
+	z.Scroll.Y = float32(cellHeight * cursor.Position.Row)
+	z.Scroll.X = 0
+	z.ContentSize.Y = float32(cellHeight * (cursor.Position.MaxRow + 1))
+	z.ContentSize.X = 0
+	z.ClampScrollsToZoneSize()
+	// rl.DrawRectangleLinesEx(z.Bounds, 2, rl.Red) // @TODO: Remove debug draw
+
+	rl.DrawRectangle(
+		int32(z.Bounds.X),
+		int32(z.Bounds.Y)+(cursor.Position.Row*cellHeight)-int32(z.Scroll.Y)-textPadding,
+		boxWidth,
+		cellHeight,
+		colors.Surface0(),
+	)
+
+	rl.BeginScissorMode(int32(z.Bounds.X), int32(z.Bounds.Y), int32(z.Bounds.Width), int32(z.Bounds.Height))
+
 	const iconWidth int32 = 16
 	const iconHeight int32 = 16
 	const iconPadding int32 = textPadding * 2
 	const connNamePadding int32 = textPadding * 3
 	const connStatusCircleRadius float32 = 2
 	var maxNumberOfCharacters int32 = (boxWidth - iconPadding*2 - iconWidth - connNamePadding*2 - int32(connStatusCircleRadius)*2) / int32(appAssets.MainFontCharacterWidth)
-	var textTopPadding int32 = boxRectangle.Y + textPadding*2 + appAssets.MainFont.BaseSize/2
-	for i := CursorConnection.Position.Row; i < CursorConnection.Position.MaxRow; i++ {
-		if i > CursorConnection.Position.Row+int32(renderedConnectionsN-1) {
-			break
-		}
+	var firstRowToRender int32 = max(int32(z.Scroll.Y)/int32(cellHeight), 0)
+	var lastRowToRender int32 = min(cursor.Position.Row+int32(renderedConnectionsN), cursor.Position.MaxRow)
+	for i := firstRowToRender; i <= lastRowToRender; i++ {
 		conn := config.Connections[i]
 		var realConnection *database.ConnectionData = database.DBConnections[conn.Name]
 
@@ -80,26 +100,26 @@ func DrawConnectionSelector(appAssets *assets.Assets, config *config.Config, scr
 		if conn.Name == database.CurrDBConnection.Name {
 			connTextColor = colors.Blue()
 		}
+		var cellY float32 = z.Bounds.Y + float32(i*cellHeight) - z.Scroll.Y
 		appAssets.DrawTextMainFont(
 			displayName,
 			rl.Vector2{
-				X: float32(boxRectangle.X + textPadding*3 + iconWidth),
-				Y: float32(textTopPadding),
+				X: z.Bounds.X + float32(textPadding*3+iconWidth),
+				Y: cellY,
 			},
 			connTextColor,
 		)
 		rl.DrawTexturePro(
 			appAssets.Icons[conn.Driver],
 			rl.Rectangle{X: 0, Y: 0, Width: float32(iconWidth), Height: float32(iconHeight)},
-			rl.Rectangle{X: float32(boxRectangle.X + iconPadding), Y: float32(textTopPadding), Width: float32(iconWidth), Height: float32(iconHeight)},
+			rl.Rectangle{X: z.Bounds.X + float32(iconPadding), Y: cellY, Width: float32(iconWidth), Height: float32(iconHeight)},
 			rl.Vector2{X: 0, Y: 0},
 			0,
 			rl.White,
 		)
 		if realConnection.Conn != false {
-			rl.DrawCircle(boxRectangle.X+iconPadding+iconWidth, textTopPadding+iconHeight, connStatusCircleRadius, colors.Green())
+			rl.DrawCircle(boxRectangle.X+iconPadding+iconWidth, int32(cellY)+iconHeight, connStatusCircleRadius, colors.Green())
 		}
-		textTopPadding += appAssets.MainFont.BaseSize + textPadding*2
 	}
-	// @TODO: Highlight current connection
+	rl.EndScissorMode()
 }

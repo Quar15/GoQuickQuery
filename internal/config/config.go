@@ -11,6 +11,8 @@ type Config struct {
 	Connections []database.ConnectionData `yaml:"connections"`
 }
 
+var Cfg *Config = &Config{}
+
 func LoadConfig(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
+	"github.com/quar15/qq-go/internal/config"
 	"github.com/quar15/qq-go/internal/database"
 	"github.com/quar15/qq-go/internal/utilities"
 	"golang.design/x/clipboard"
@@ -153,8 +154,13 @@ func (ConnectionsCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *d
 			}
 		} else {
 			switch {
+			case rl.IsKeyPressed(rl.KeyEnter):
+				database.CurrDBConnection = database.DBConnections[config.Cfg.Connections[CursorConnection.Position.Row].Name]
+				CursorConnection.TransitionMode(ModeNormal)
+				CurrCursor = CursorSpreadsheet
 			case rl.IsKeyPressed(rl.KeyEscape) || rl.IsKeyPressed(rl.KeyCapsLock): // @TODO: Remove personal preference CapsLock
-				cursor.Handler.Reset(cursor)
+				CursorConnection.TransitionMode(ModeNormal)
+				CurrCursor = CursorSpreadsheet
 			case utilities.Contains(HANDLED_MOTION_KEY_CODES, int(keyPressed)):
 				cursor.AppendMotion(rune(keyPressed)) // @TODO: Disable visual mode for connection selection
 			case rl.IsKeyPressed(rl.KeySlash):
@@ -194,7 +200,7 @@ func (ConnectionsCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *d
 		}
 	}
 
-	// cursor.Zone.ClampScrollsToZoneSize()
+	cursor.Zone.ClampScrollsToZoneSize()
 	cursor.ClampFocus(0, cursor.Position.MaxRow)
 	cursor.UpdateSelectBasedOnPosition()
 }

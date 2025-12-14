@@ -38,7 +38,7 @@ func initialize(cfg *config.Config) error {
 	return nil
 }
 
-func handleDropFiles(appAssets *assets.Assets, cursor *display.Cursor, dg *database.DataGrid) {
+func handleDropFiles(appAssets *assets.Assets, dg *database.DataGrid, eg *display.EditorGrid) {
 	if rl.IsFileDropped() {
 		droppedFilesPaths := rl.LoadDroppedFiles()
 		// @TODO: Extend to handle every file if tabs are added
@@ -49,21 +49,30 @@ func handleDropFiles(appAssets *assets.Assets, cursor *display.Cursor, dg *datab
 		switch ext {
 		case ".sql":
 			slog.Info("Loaded sql file")
-			// @TODO: Pass file to editor
+			newEg, err := display.LoadEditorGridFromTextFile(droppedFilesPaths[0], appAssets)
+			if err != nil {
+				slog.Error("Failed to load file", slog.Any("path", droppedFilesPaths[0]))
+				display.CursorEditor.Common.Logs.Channel <- fmt.Sprintf("ERR: Failed to parse sql file '%s'", droppedFilesPaths[0])
+			} else {
+				*eg = *newEg
+				display.CursorEditor.Handler.Reset(display.CursorSpreadsheet)
+				display.CursorEditor.Position.MaxCol = 1
+				display.CursorEditor.Position.MaxRow = eg.Rows - 1
+				display.CursorEditor.Common.Logs.Channel <- fmt.Sprintf("Loaded sql file '%s'", droppedFilesPaths[0])
+			}
 		case ".csv":
 			slog.Info("Loaded csv file")
 			newDg, err := database.LoadDataGridFromCSV(droppedFilesPaths[0], appAssets)
 			if err != nil {
 				slog.Error("Failed to load file", slog.Any("path", droppedFilesPaths[0]))
-				dg = &database.DataGrid{} // @TODO: Consider using tmp variable to not stain already loaded data
-				cursor.Common.Logs.Channel <- fmt.Sprintf("ERR: Failed to parse csv file '%s'", droppedFilesPaths[0])
+				display.CursorSpreadsheet.Common.Logs.Channel <- fmt.Sprintf("ERR: Failed to parse csv file '%s'", droppedFilesPaths[0])
 			} else {
 				*dg = *newDg
 				dg.UpdateColumnsWidth(appAssets)
-				cursor.Handler.Reset(cursor)
+				display.CursorSpreadsheet.Handler.Reset(display.CursorSpreadsheet)
 				display.CursorSpreadsheet.Position.MaxCol = dg.Cols - 1
 				display.CursorSpreadsheet.Position.MaxRow = dg.Rows - 1
-				cursor.Common.Logs.Channel <- fmt.Sprintf("Loaded csv file '%s'", droppedFilesPaths[0])
+				display.CursorSpreadsheet.Common.Logs.Channel <- fmt.Sprintf("Loaded csv file '%s'", droppedFilesPaths[0])
 			}
 		default:
 			slog.Warn("Unhandled type of file", slog.String("extension", ext))
@@ -130,7 +139,7 @@ func main() {
 	defer appAssets.UnloadAssets()
 
 	splitter := display.Splitter{
-		Ratio:    0.01,
+		Ratio:    0.6,
 		Height:   6.0,
 		Dragging: false,
 	}
@@ -152,6 +161,9 @@ func main() {
 	var commandZoneHeight float32 = (appAssets.MainFontSize*2 + appAssets.MainFontSpacing*2)
 
 	var dg database.DataGrid
+	var eg display.EditorGrid
+
+	eg.FakeInit(&appAssets)
 
 	rl.SetTargetFPS(60)
 
@@ -175,7 +187,7 @@ func main() {
 		topZone.UpdateZoneScroll()
 		bottomZone.UpdateZoneScroll()
 
-		handleDropFiles(&appAssets, display.CurrCursor, &dg)
+		handleDropFiles(&appAssets, &dg, &eg)
 		handleQuery(&appAssets, display.CurrCursor, &dg)
 		display.CurrCursor.Handler.HandleInput(&appAssets, &dg, display.CurrCursor)
 
@@ -183,7 +195,7 @@ func main() {
 		rl.BeginDrawing()
 		rl.ClearBackground(colors.Background())
 
-		topZone.Draw(&appAssets)
+		topZone.DrawEditor(&appAssets, &eg)
 		bottomZone.DrawSpreadsheetZone(&appAssets, &dg, display.CursorSpreadsheet)
 		commandZone.DrawCommandZone(&appAssets, display.CurrCursor)
 

@@ -60,3 +60,14 @@ func DebugPrintMap(m []map[string]any) {
 		}
 	}
 }
+
+func IsWordChar(c byte) bool {
+	return (c >= 'a' && c <= 'z') ||
+		(c >= 'A' && c <= 'Z') ||
+		(c >= '0' && c <= '9') ||
+		c == '_'
+}
+
+func IsDigit(c byte) bool {
+	return c >= '0' && c <= '9'
+}

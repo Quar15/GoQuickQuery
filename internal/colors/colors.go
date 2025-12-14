@@ -12,6 +12,7 @@ var (
 	mantle     = rl.NewColor(24, 24, 37, 255)
 	crust      = rl.NewColor(17, 17, 27, 255)
 	blue       = rl.NewColor(137, 180, 250, 255)
+	yellow     = rl.NewColor(249, 226, 175, 255)
 	green      = rl.NewColor(166, 227, 161, 255)
 	peach      = rl.NewColor(250, 179, 135, 255)
 	pink       = rl.NewColor(245, 194, 231, 255)
@@ -27,6 +28,7 @@ func Surface0() rl.Color   { return surface0 }
 func Mantle() rl.Color     { return mantle }
 func Crust() rl.Color      { return crust }
 func Blue() rl.Color       { return blue }
+func Yellow() rl.Color     { return yellow }
 func Green() rl.Color      { return green }
 func Peach() rl.Color      { return peach }
 func Pink() rl.Color       { return pink }

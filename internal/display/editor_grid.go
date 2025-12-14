@@ -1,0 +1,215 @@
+package display
+
+import (
+	"bufio"
+	"errors"
+	"os"
+	"strings"
+
+	rl "github.com/gen2brain/raylib-go/raylib"
+	"github.com/quar15/qq-go/internal/assets"
+	"github.com/quar15/qq-go/internal/colors"
+	"github.com/quar15/qq-go/internal/utilities"
+)
+
+type HighlightColorEnum int8
+
+const (
+	HighlightKeyword HighlightColorEnum = iota
+	HighlightFunction
+	HighlightDatabaseVar // tablespaces, tables
+	HighlightText
+	HighlightNumber
+	HighlightNormal
+)
+
+var highlightColor = map[HighlightColorEnum]rl.Color{
+	HighlightKeyword:     colors.Mauve(),
+	HighlightFunction:    colors.Blue(),
+	HighlightDatabaseVar: colors.Yellow(),
+	HighlightText:        colors.Green(),
+	HighlightNumber:      colors.Peach(),
+	HighlightNormal:      colors.Text(),
+}
+
+func (hc HighlightColorEnum) Color() rl.Color {
+	return highlightColor[hc]
+}
+
+type EditorGrid struct {
+	Text      []string
+	Rows      int32
+	Cols      []int32
+	Highlight [][]HighlightColorEnum
+	MaxWidth  float32
+}
+
+func (eg *EditorGrid) UpdateHighlight(fromRow int32, toRow int32) {
+	for row := fromRow; row <= toRow; row++ {
+		if eg.Cols[row] == 0 {
+			eg.Highlight[row] = nil
+			continue
+		}
+
+		if int32(cap(eg.Highlight[row])) < eg.Cols[row] {
+			eg.Highlight[row] = make([]HighlightColorEnum, eg.Cols[row])
+		} else {
+			eg.Highlight[row] = eg.Highlight[row][:eg.Cols[row]]
+		}
+
+		// @TODO: Highlight
+		for i := range eg.Highlight[row] {
+			eg.Highlight[row][i] = HighlightNormal
+		}
+
+		i := int32(0)
+		line := eg.Text[row]
+		for i < eg.Cols[row] {
+			c := line[i]
+			// Text
+			if c == '\'' {
+				eg.Highlight[row][i] = HighlightText
+				i++
+				for i < eg.Cols[row] {
+					eg.Highlight[row][i] = HighlightText
+					if line[i] == '\'' {
+						i++
+						break
+					}
+					i++
+				}
+			}
+
+			// DB Variables
+			if c == '"' {
+				eg.Highlight[row][i] = HighlightDatabaseVar
+				i++
+				for i < eg.Cols[row] {
+					eg.Highlight[row][i] = HighlightDatabaseVar
+					if line[i] == '"' {
+						i++
+						break
+					}
+					i++
+				}
+			}
+
+			// Digits
+			if utilities.IsDigit(c) {
+				start := i
+				for i < eg.Cols[row] && utilities.IsDigit(line[i]) {
+					i++
+				}
+				for j := start; j < i; j++ {
+					eg.Highlight[row][j] = HighlightNumber
+				}
+				continue
+			}
+
+			if utilities.IsWordChar(c) {
+				start := i
+				for i < eg.Cols[row] && utilities.IsWordChar(line[i]) {
+					i++
+				}
+
+				word := strings.ToLower(line[start:i])
+
+				var color HighlightColorEnum = HighlightNormal
+
+				if _, ok := utilities.SqlKeywords[word]; ok {
+					color = HighlightKeyword
+				} else if _, ok := utilities.SqlFunctions[word]; ok {
+					color = HighlightFunction
+				}
+
+				if color != HighlightNormal {
+					for j := start; j < i; j++ {
+						eg.Highlight[row][j] = color
+					}
+				}
+
+				continue
+			}
+
+			i++
+		}
+
+	}
+}
+
+func (eg *EditorGrid) FakeInit(appAssets *assets.Assets) {
+	eg.Text = []string{
+		"SELECT * FROM example LIMIT 500;",
+		"",
+		"UPDATE example SET x = 1 WHERE id = 2;",
+		"SELECT * FROM \"public.example\" WHERE a = 'xyz';",
+	}
+	eg.Rows = int32(len(eg.Text))
+	eg.Highlight = make([][]HighlightColorEnum, eg.Rows)
+	var maxCol int32 = 0
+	for row := int32(0); row < eg.Rows; row++ {
+		lineLen := int32(len(eg.Text[row]))
+		eg.Cols = append(eg.Cols, lineLen)
+		if maxCol < lineLen {
+			maxCol = lineLen
+			eg.MaxWidth = appAssets.MeasureTextMainFont(eg.Text[row]).X
+		}
+
+		if lineLen > 0 {
+			eg.Highlight = append(eg.Highlight, make([]HighlightColorEnum, lineLen))
+		} else {
+			eg.Highlight = append(eg.Highlight, nil)
+		}
+	}
+	eg.UpdateHighlight(0, eg.Rows-1)
+}
+
+func LoadEditorGridFromTextFile(path string, appAssets *assets.Assets) (*EditorGrid, error) {
+	var eg *EditorGrid = &EditorGrid{}
+
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	reader := bufio.NewReader(f)
+	eg.Text = make([]string, 0, 256)
+	eg.Rows = 0
+	eg.MaxWidth = 0
+	eg.Highlight = make([][]HighlightColorEnum, 0, 256)
+	var eof bool = false
+	var maxCol int32 = 0
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			if err.Error() == "EOF" {
+				eof = true
+			} else {
+				return nil, errors.New("Failed to parse provided file")
+			}
+		}
+		line = strings.TrimRight(line, "\n")
+		eg.Text = append(eg.Text, line)
+		eg.Rows++
+		lineLen := int32(len(line))
+		eg.Cols = append(eg.Cols, lineLen)
+		if maxCol < lineLen {
+			maxCol = lineLen
+			eg.MaxWidth = appAssets.MeasureTextMainFont(line).X
+		}
+
+		if lineLen > 0 {
+			eg.Highlight = append(eg.Highlight, make([]HighlightColorEnum, lineLen))
+		} else {
+			eg.Highlight = append(eg.Highlight, nil)
+		}
+
+		if eof {
+			break
+		}
+	}
+
+	eg.UpdateHighlight(0, eg.Rows-1)
+	return eg, nil
+}

@@ -189,7 +189,7 @@ func main() {
 
 		handleDropFiles(&appAssets, &dg, &eg)
 		handleQuery(&appAssets, display.CurrCursor, &dg)
-		display.CurrCursor.Handler.HandleInput(&appAssets, &dg, display.CurrCursor)
+		display.CurrCursor.Handler.HandleInput(&appAssets, &dg, &eg, display.CurrCursor)
 
 		// --- Drawing ---
 		rl.BeginDrawing()
@@ -199,7 +199,7 @@ func main() {
 		bottomZone.DrawSpreadsheetZone(&appAssets, &dg, display.CursorSpreadsheet)
 		commandZone.DrawCommandZone(&appAssets, display.CurrCursor)
 
-		rl.DrawRectangleRec(splitter.Rect, colors.Crust())
+		splitter.Draw()
 
 		if display.CurrCursor.Type == display.CursorTypeConnections {
 			connectionsZone.DrawConnectionSelector(&appAssets, cfg, display.CursorConnection, int32(screenWidth), int32(screenHeight))

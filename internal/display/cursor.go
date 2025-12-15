@@ -79,7 +79,7 @@ type CursorCommon struct {
 }
 
 type CursorHandler interface {
-	HandleInput(appAssets *assets.Assets, dg *database.DataGrid, cursor *Cursor)
+	HandleInput(appAssets *assets.Assets, dg *database.DataGrid, eg *EditorGrid, cursor *Cursor)
 	Reset(c *Cursor)
 	Init(c *Cursor, z *Zone)
 }
@@ -223,10 +223,16 @@ var HANDLED_MOTION_KEY_CODES []int = []int{
 	rl.KeyZero, rl.KeyOne, rl.KeyTwo, rl.KeyThree, rl.KeyFour, rl.KeyFive, rl.KeySix, rl.KeySeven, rl.KeyEight, rl.KeyNine,
 	rl.KeyV, utilities.KeySmallV,
 	rl.KeyG, utilities.KeySmallG,
+	utilities.KeySmallW,
 }
 
 func (c *Cursor) AppendMotion(char rune) {
 	c.Common.MotionBuf += string(char)
+	c.CheckForMotion()
+}
+
+func (c *Cursor) AppendMotionString(chars string) {
+	c.Common.MotionBuf += chars
 	c.CheckForMotion()
 }
 
@@ -257,6 +263,15 @@ func (c *Cursor) CheckForMotion() {
 		motionExecuted = true
 	case "v":
 		c.SetSelect(c.Position.Col, c.Position.Row, c.Position.Col, c.Position.Row)
+		motionExecuted = true
+	case "^Ww":
+		// @TODO: Consider swapping from connection cursor
+		switch c.Type {
+		case CursorTypeEditor:
+			CurrCursor = CursorSpreadsheet
+		case CursorTypeSpreadsheet:
+			CurrCursor = CursorEditor
+		}
 		motionExecuted = true
 	default:
 		var motionRe = regexp.MustCompile(`^([0-9]+)([hjklG])$`)
@@ -314,7 +329,7 @@ func (ConnectionsCursorStateHandler) Init(c *Cursor, z *Zone) {
 	c.Common.Logs.Init()
 	c.Handler.Reset(c)
 	c.Position.MaxCol = 0
-	c.Position.MaxRow = int32(len(database.DBConnections))-1
+	c.Position.MaxRow = int32(len(database.DBConnections)) - 1
 	c.Zone = z
 }
 

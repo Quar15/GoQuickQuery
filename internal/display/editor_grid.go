@@ -39,8 +39,9 @@ func (hc HighlightColorEnum) Color() rl.Color {
 type EditorGrid struct {
 	Text      []string
 	Rows      int32
-	Cols      []int32
+	Cols      []int8
 	Highlight [][]HighlightColorEnum
+	MaxCol    int8
 	MaxWidth  float32
 }
 
@@ -51,7 +52,7 @@ func (eg *EditorGrid) UpdateHighlight(fromRow int32, toRow int32) {
 			continue
 		}
 
-		if int32(cap(eg.Highlight[row])) < eg.Cols[row] {
+		if int8(cap(eg.Highlight[row])) < eg.Cols[row] {
 			eg.Highlight[row] = make([]HighlightColorEnum, eg.Cols[row])
 		} else {
 			eg.Highlight[row] = eg.Highlight[row][:eg.Cols[row]]
@@ -62,7 +63,7 @@ func (eg *EditorGrid) UpdateHighlight(fromRow int32, toRow int32) {
 			eg.Highlight[row][i] = HighlightNormal
 		}
 
-		i := int32(0)
+		i := int8(0)
 		line := eg.Text[row]
 		for i < eg.Cols[row] {
 			c := line[i]
@@ -149,7 +150,7 @@ func (eg *EditorGrid) FakeInit(appAssets *assets.Assets) {
 	var maxCol int32 = 0
 	for row := int32(0); row < eg.Rows; row++ {
 		lineLen := int32(len(eg.Text[row]))
-		eg.Cols = append(eg.Cols, lineLen)
+		eg.Cols = append(eg.Cols, int8(lineLen))
 		if maxCol < lineLen {
 			maxCol = lineLen
 			eg.MaxWidth = appAssets.MeasureTextMainFont(eg.Text[row]).X
@@ -193,9 +194,10 @@ func LoadEditorGridFromTextFile(path string, appAssets *assets.Assets) (*EditorG
 		eg.Text = append(eg.Text, line)
 		eg.Rows++
 		lineLen := int32(len(line))
-		eg.Cols = append(eg.Cols, lineLen)
+		eg.Cols = append(eg.Cols, int8(lineLen))
 		if maxCol < lineLen {
 			maxCol = lineLen
+			eg.MaxCol = int8(lineLen)
 			eg.MaxWidth = appAssets.MeasureTextMainFont(line).X
 		}
 

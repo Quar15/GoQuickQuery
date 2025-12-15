@@ -11,6 +11,7 @@ const KeySmallJ int = 106
 const KeySmallK int = 107
 const KeySmallL int = 108
 const KeySmallV int = 118
+const KeySmallW int = 119
 
 func Contains(slice []int, element int) bool {
 	for _, v := range slice {

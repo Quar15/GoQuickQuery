@@ -26,6 +26,7 @@ func (z *Zone) DrawEditor(appAssets *assets.Assets, eg *EditorGrid) {
 	rl.BeginScissorMode(int32(z.Bounds.X), int32(z.Bounds.Y), int32(z.Bounds.Width), int32(z.Bounds.Height))
 	rl.ClearBackground(colors.Background())
 
+	// Draw text
 	for row := firstVisibleRowToScrollIndex; row < lastRowToRender; row++ {
 		var cellY float32 = z.Bounds.Y + float32(row*int32(cellHeight)) - z.Scroll.Y + float32(rowsInitialPadding) + float32(textPadding)
 		if eg.Highlight[row] != nil {
@@ -49,7 +50,36 @@ func (z *Zone) DrawEditor(appAssets *assets.Assets, eg *EditorGrid) {
 		var cellY float32 = z.Bounds.Y + float32(row*int32(cellHeight)) - z.Scroll.Y + float32(rowsInitialPadding) + float32(textPadding)
 		appAssets.DrawTextMainFont(strconv.Itoa(int(row+1)), rl.Vector2{X: cellX, Y: cellY}, colors.Overlay0())
 	}
-	// Draw text
+	// Draw Cursor
+	if eg.Cols[CursorEditor.Position.Row] > 0 {
+		var cellY float32 = z.Bounds.Y + float32(CursorEditor.Position.Row*int32(cellHeight)) - z.Scroll.Y + float32(rowsInitialPadding) + float32(textPadding)
+		var cellX float32 = z.Bounds.X + float32(counterColumnWidth) + float32(textPadding) + float32(CursorEditor.Position.Col)*appAssets.MainFontCharacterWidth
+		rl.DrawRectangle(
+			int32(cellX),
+			int32(cellY),
+			int32(appAssets.MainFontCharacterWidth),
+			appAssets.MainFont.BaseSize,
+			colors.Text(),
+		)
+		rl.DrawTextEx(
+			appAssets.MainFont,
+			string(eg.Text[CursorEditor.Position.Row][CursorEditor.Position.Col]),
+			rl.Vector2{X: float32(cellX), Y: float32(cellY)},
+			appAssets.MainFontSize,
+			appAssets.MainFontSpacing,
+			colors.Background(),
+		)
+	} else {
+		var cellY float32 = z.Bounds.Y + float32(CursorEditor.Position.Row*int32(cellHeight)) - z.Scroll.Y + float32(rowsInitialPadding) + float32(textPadding)
+		var cellX float32 = z.Bounds.X + float32(counterColumnWidth) + float32(textPadding)
+		rl.DrawRectangle(
+			int32(cellX),
+			int32(cellY),
+			int32(appAssets.MainFontCharacterWidth),
+			appAssets.MainFont.BaseSize,
+			colors.Text(),
+		)
+	}
 
 	rl.EndScissorMode()
 

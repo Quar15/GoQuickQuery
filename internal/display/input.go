@@ -7,7 +7,6 @@ import (
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
-	"github.com/quar15/qq-go/internal/config"
 	"github.com/quar15/qq-go/internal/database"
 	"github.com/quar15/qq-go/internal/format"
 	"golang.design/x/clipboard"

@@ -18,7 +18,7 @@ import (
 	"github.com/quar15/qq-go/internal/config"
 	"github.com/quar15/qq-go/internal/database"
 	"github.com/quar15/qq-go/internal/display"
-	"github.com/quar15/qq-go/internal/utilities"
+	"github.com/quar15/qq-go/internal/format"
 )
 
 func initialize(cfg *config.Config) error {
@@ -97,7 +97,7 @@ func handleQuery(appAssets *assets.Assets, cursor *display.Cursor, dg *database.
 			} else {
 				*dg = *newDg
 				dg.UpdateColumnsWidth(appAssets)
-				utilities.DebugPrintMap(dg.Data)
+				format.PrintMap(dg.Data)
 				cursor.Handler.Reset(cursor)
 				display.CursorSpreadsheet.Position.MaxCol = dg.Cols
 				display.CursorSpreadsheet.Position.MaxRow = dg.Rows
@@ -111,7 +111,7 @@ func handleQuery(appAssets *assets.Assets, cursor *display.Cursor, dg *database.
 }
 
 func main() {
-	cfg, err := config.LoadConfig("./gqq.yaml")
+	cfg, err := config.LoadConfig("./config/gqq.yaml")
 	if err != nil {
 		slog.Error("Failed to read config", slog.Any("error", err))
 		os.Exit(1)
@@ -127,7 +127,7 @@ func main() {
 	var screenWidth int = rl.GetScreenWidth()
 	var screenHeight int = rl.GetScreenHeight()
 	rl.SetConfigFlags(rl.FlagWindowResizable)
-	rl.InitWindow(int32(screenWidth), int32(screenHeight), "QQ")
+	rl.InitWindow(int32(screenWidth), int32(screenHeight), "GQQ")
 	defer rl.CloseWindow()
 	rl.SetExitKey(rl.KeyNull)
 
@@ -152,7 +152,7 @@ func main() {
 	display.CursorEditor.Handler.Init(display.CursorEditor, &topZone)
 	display.CursorSpreadsheet.Handler.Init(display.CursorSpreadsheet, &bottomZone)
 	display.CursorConnection.Handler.Init(display.CursorConnection, &connectionsZone)
-	display.CurrCursor = display.CursorSpreadsheet
+	display.CurrCursor = display.CursorEditor
 
 	topZone.ContentSize = rl.Vector2{X: 1600, Y: 1200}
 	bottomZone.ContentSize = rl.Vector2{X: 2000, Y: 2000}

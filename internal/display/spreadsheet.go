@@ -7,7 +7,7 @@ import (
 	"github.com/quar15/qq-go/internal/assets"
 	"github.com/quar15/qq-go/internal/colors"
 	"github.com/quar15/qq-go/internal/database"
-	"github.com/quar15/qq-go/internal/utilities"
+	"github.com/quar15/qq-go/internal/format"
 )
 
 func (z *Zone) GetNumberOfVisibleRows(cellHeight int32) int8 {
@@ -24,7 +24,7 @@ func (z *Zone) DrawSpreadsheetZone(appAssets *assets.Assets, dg *database.DataGr
 
 	var contentWidth int = 0
 	var contentHeight int = 0
-	var counterColumnCharactersCount int = utilities.CountDigits(int(dg.Rows))
+	var counterColumnCharactersCount int = format.CountDigits(int(dg.Rows))
 	var counterColumnWidth int = int(appAssets.MainFontCharacterWidth)*counterColumnCharactersCount + int(textPadding*2)
 	contentWidth += counterColumnWidth
 	for col := int8(0); col < dg.Cols; col++ {
@@ -72,7 +72,7 @@ func (z *Zone) DrawSpreadsheetZone(appAssets *assets.Assets, dg *database.DataGr
 					cursor.Position.Row = row
 				}
 			}
-			cellText := utilities.GetValueAsString(val)
+			cellText := format.GetValueAsString(val)
 			var cellTextSliceLimit int = len(cellText)
 			var maxNumberOfCharacters int = int(dg.ColumnsWidth[c] / int32(appAssets.MainFontCharacterWidth))
 			if cellTextSliceLimit > maxNumberOfCharacters {
@@ -106,7 +106,7 @@ func (z *Zone) DrawSpreadsheetZone(appAssets *assets.Assets, dg *database.DataGr
 		if z.MouseInside(mouse) && mouse.Y > float32(cellY) && mouse.Y < float32(cellY)+float32(cellHeight) {
 			bg = colors.Mantle()
 		}
-		var counterColumnLeftPadding float32 = float32(textPadding) + float32(counterColumnCharactersCount-utilities.CountDigits(int(row)+1))*appAssets.MainFontCharacterWidth
+		var counterColumnLeftPadding float32 = float32(textPadding) + float32(counterColumnCharactersCount-format.CountDigits(int(row)+1))*appAssets.MainFontCharacterWidth
 		rl.DrawRectangle(cellX, cellY, int32(counterColumnWidth), int32(cellHeight), bg)
 		rl.DrawLineEx(rl.Vector2{X: float32(cellX), Y: float32(cellY)}, rl.Vector2{X: float32(cellX + int32(counterColumnWidth)), Y: float32(cellY)}, 2, colors.Surface1())
 		appAssets.DrawTextMainFont(strconv.Itoa(int(row+1)), rl.Vector2{X: float32(cellX) + counterColumnLeftPadding, Y: float32(cellY + textPadding)}, colors.Overlay0())

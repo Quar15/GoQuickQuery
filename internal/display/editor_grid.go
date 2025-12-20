@@ -9,7 +9,7 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
 	"github.com/quar15/qq-go/internal/colors"
-	"github.com/quar15/qq-go/internal/utilities"
+	"github.com/quar15/qq-go/internal/database"
 )
 
 type HighlightColorEnum int8
@@ -96,9 +96,9 @@ func (eg *EditorGrid) UpdateHighlight(fromRow int32, toRow int32) {
 			}
 
 			// Digits
-			if utilities.IsDigit(c) {
+			if isDigit(c) {
 				start := i
-				for i < eg.Cols[row] && utilities.IsDigit(line[i]) {
+				for i < eg.Cols[row] && isDigit(line[i]) {
 					i++
 				}
 				for j := start; j < i; j++ {
@@ -107,9 +107,9 @@ func (eg *EditorGrid) UpdateHighlight(fromRow int32, toRow int32) {
 				continue
 			}
 
-			if utilities.IsWordChar(c) {
+			if isWordChar(c) {
 				start := i
-				for i < eg.Cols[row] && utilities.IsWordChar(line[i]) {
+				for i < eg.Cols[row] && isWordChar(line[i]) {
 					i++
 				}
 
@@ -117,9 +117,9 @@ func (eg *EditorGrid) UpdateHighlight(fromRow int32, toRow int32) {
 
 				var color HighlightColorEnum = HighlightNormal
 
-				if _, ok := utilities.SqlKeywords[word]; ok {
+				if _, ok := database.SqlKeywords[word]; ok {
 					color = HighlightKeyword
-				} else if _, ok := utilities.SqlFunctions[word]; ok {
+				} else if _, ok := database.PostgresqlFunctionsKeywords[word]; ok {
 					color = HighlightFunction
 				}
 
@@ -214,4 +214,15 @@ func LoadEditorGridFromTextFile(path string, appAssets *assets.Assets) (*EditorG
 
 	eg.UpdateHighlight(0, eg.Rows-1)
 	return eg, nil
+}
+
+func isWordChar(c byte) bool {
+	return (c >= 'a' && c <= 'z') ||
+		(c >= 'A' && c <= 'Z') ||
+		(c >= '0' && c <= '9') ||
+		c == '_'
+}
+
+func isDigit(c byte) bool {
+	return c >= '0' && c <= '9'
 }

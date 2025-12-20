@@ -1,4 +1,4 @@
-package utilities
+package database
 
 var SqlKeywords = map[string]struct{}{
 	"a":                                {},
@@ -847,7 +847,7 @@ var SqlKeywords = map[string]struct{}{
 	"zone":                             {},
 }
 
-var SqlFunctions = map[string]struct{}{
+var PostgresqlFunctionsKeywords = map[string]struct{}{
 	"abbrev":                                {},
 	"abs":                                   {},
 	"aclcontains":                           {},

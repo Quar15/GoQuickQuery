@@ -6,7 +6,7 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
 	"github.com/quar15/qq-go/internal/colors"
-	"github.com/quar15/qq-go/internal/utilities"
+	"github.com/quar15/qq-go/internal/format"
 )
 
 func (z *Zone) DrawEditor(appAssets *assets.Assets, eg *EditorGrid) {
@@ -16,7 +16,7 @@ func (z *Zone) DrawEditor(appAssets *assets.Assets, eg *EditorGrid) {
 
 	var contentHeight int = 0
 
-	var counterColumnCharactersCount int = utilities.CountDigits(int(eg.Rows))
+	var counterColumnCharactersCount int = format.CountDigits(int(eg.Rows))
 	var counterColumnWidth int = int(appAssets.MainFontCharacterWidth)*counterColumnCharactersCount + int(textPadding*2)
 
 	var rowsToRender int8 = z.GetNumberOfVisibleRows(int32(cellHeight)) + 1
@@ -45,7 +45,7 @@ func (z *Zone) DrawEditor(appAssets *assets.Assets, eg *EditorGrid) {
 	}
 	// Draw row counter
 	for row := firstVisibleRowToScrollIndex; row < lastRowToRender; row++ {
-		var counterColumnLeftPadding float32 = float32(textPadding) + float32(counterColumnCharactersCount-utilities.CountDigits(int(row)+1))*appAssets.MainFontCharacterWidth
+		var counterColumnLeftPadding float32 = float32(textPadding) + float32(counterColumnCharactersCount-format.CountDigits(int(row)+1))*appAssets.MainFontCharacterWidth
 		var cellX float32 = z.Bounds.X + counterColumnLeftPadding
 		var cellY float32 = z.Bounds.Y + float32(row*int32(cellHeight)) - z.Scroll.Y + float32(rowsInitialPadding) + float32(textPadding)
 		appAssets.DrawTextMainFont(strconv.Itoa(int(row+1)), rl.Vector2{X: cellX, Y: cellY}, colors.Overlay0())

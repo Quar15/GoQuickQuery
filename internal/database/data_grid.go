@@ -7,7 +7,7 @@ import (
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
-	"github.com/quar15/qq-go/internal/utilities"
+	"github.com/quar15/qq-go/internal/format"
 )
 
 type DataGrid struct {
@@ -41,7 +41,7 @@ func (dg *DataGrid) UpdateColumnsWidth(appAssets *assets.Assets) {
 		headerWidth = min(max(headerWidth, minimumColWidth), maximumColWidth)
 		for row := range dg.Rows {
 			val := dg.Data[row][h]
-			var textWidth int32 = int32(rl.MeasureTextEx(appAssets.MainFont, utilities.GetValueAsString(val), appAssets.MainFontSize, appAssets.MainFontSpacing).X) + (textPadding * 3)
+			var textWidth int32 = int32(rl.MeasureTextEx(appAssets.MainFont, format.GetValueAsString(val), appAssets.MainFontSize, appAssets.MainFontSpacing).X) + (textPadding * 3)
 			if textWidth > headerWidth {
 				headerWidth = textWidth
 			}

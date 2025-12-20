@@ -2,14 +2,23 @@ package display
 
 import (
 	"log/slog"
+	"slices"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
 	"github.com/quar15/qq-go/internal/config"
 	"github.com/quar15/qq-go/internal/database"
-	"github.com/quar15/qq-go/internal/utilities"
+	"github.com/quar15/qq-go/internal/format"
 	"golang.design/x/clipboard"
 )
+
+const keySmallG int = 103
+const keySmallH int = 104
+const keySmallJ int = 106
+const keySmallK int = 107
+const keySmallL int = 108
+const keySmallV int = 118
+const keySmallW int = 119
 
 func (SpreadsheetCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *database.DataGrid, eg *EditorGrid, cursor *Cursor) {
 	const cellHeight int32 = 30 // @TODO: Pass configuration with cellHeight
@@ -40,7 +49,7 @@ func (SpreadsheetCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *d
 				cursor.Position.Col = 0
 			case rl.IsKeyPressed(rl.KeyEnd):
 				cursor.Position.Col = dg.Cols - 1
-			case utilities.Contains(HANDLED_MOTION_KEY_CODES, int(keyPressed)):
+			case slices.Contains(HANDLED_MOTION_KEY_CODES, int(keyPressed)):
 				cursor.AppendMotion(rune(keyPressed))
 			}
 		} else if rl.IsKeyDown(rl.KeyLeftControl) {
@@ -52,12 +61,12 @@ func (SpreadsheetCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *d
 					if cursor.Common.Mode == ModeVisual || cursor.Common.Mode == ModeVLine {
 						for row := cursor.Position.SelectStartRow; row <= cursor.Position.SelectEndRow; row++ {
 							for col := cursor.Position.SelectStartCol; col < cursor.Position.SelectEndCol; col++ {
-								dataString += utilities.GetValueAsString(dg.Data[row][dg.Headers[col]]) + ","
+								dataString += format.GetValueAsString(dg.Data[row][dg.Headers[col]]) + ","
 							}
-							dataString += utilities.GetValueAsString(dg.Data[row][dg.Headers[cursor.Position.SelectEndCol]]) + "\n"
+							dataString += format.GetValueAsString(dg.Data[row][dg.Headers[cursor.Position.SelectEndCol]]) + "\n"
 						}
 					} else {
-						dataString = utilities.GetValueAsString(dg.Data[cursor.Position.Row][dg.Headers[cursor.Position.Col]])
+						dataString = format.GetValueAsString(dg.Data[cursor.Position.Row][dg.Headers[cursor.Position.Col]])
 					}
 					clipboard.Write(clipboard.FmtText, []byte(dataString))
 				}
@@ -72,7 +81,7 @@ func (SpreadsheetCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *d
 			switch {
 			case rl.IsKeyPressed(rl.KeyEscape) || rl.IsKeyPressed(rl.KeyCapsLock): // @TODO: Remove personal preference CapsLock
 				cursor.Handler.Reset(cursor)
-			case utilities.Contains(HANDLED_MOTION_KEY_CODES, int(keyPressed)):
+			case slices.Contains(HANDLED_MOTION_KEY_CODES, int(keyPressed)):
 				cursor.AppendMotion(rune(keyPressed))
 			case rl.IsKeyPressed(rl.KeySlash):
 				cursor.Common.Mode = ModeCommand
@@ -127,7 +136,7 @@ func (ConnectionsCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *d
 	case ModeNormal:
 		if rl.IsKeyDown(rl.KeyLeftShift) {
 			switch {
-			case utilities.Contains(HANDLED_MOTION_KEY_CODES, int(keyPressed)):
+			case slices.Contains(HANDLED_MOTION_KEY_CODES, int(keyPressed)):
 				cursor.AppendMotion(rune(keyPressed))
 			case rl.IsKeyPressed(rl.KeyHome):
 				cursor.Position.Col = 0
@@ -151,7 +160,7 @@ func (ConnectionsCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *d
 			case rl.IsKeyPressed(rl.KeyEscape) || rl.IsKeyPressed(rl.KeyCapsLock): // @TODO: Remove personal preference CapsLock
 				CursorConnection.TransitionMode(ModeNormal)
 				CurrCursor = CursorSpreadsheet
-			case utilities.Contains(HANDLED_MOTION_KEY_CODES, int(keyPressed)):
+			case slices.Contains(HANDLED_MOTION_KEY_CODES, int(keyPressed)):
 				cursor.AppendMotion(rune(keyPressed)) // @TODO: Disable visual mode for connection selection
 			case rl.IsKeyPressed(rl.KeySlash):
 				cursor.Common.Mode = ModeCommand
@@ -220,7 +229,7 @@ func (EditorCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *databa
 	case ModeNormal:
 		if rl.IsKeyDown(rl.KeyLeftShift) {
 			switch {
-			case utilities.Contains(HANDLED_MOTION_KEY_CODES, int(keyPressed)):
+			case slices.Contains(HANDLED_MOTION_KEY_CODES, int(keyPressed)):
 				cursor.AppendMotion(rune(keyPressed))
 			case rl.IsKeyPressed(rl.KeyHome):
 				cursor.Position.Col = 0
@@ -246,12 +255,12 @@ func (EditorCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *databa
 					if cursor.Common.Mode == ModeVisual || cursor.Common.Mode == ModeVLine {
 						for row := cursor.Position.SelectStartRow; row <= cursor.Position.SelectEndRow; row++ {
 							for col := cursor.Position.SelectStartCol; col < cursor.Position.SelectEndCol; col++ {
-								dataString += utilities.GetValueAsString(dg.Data[row][dg.Headers[col]]) + ","
+								dataString += format.GetValueAsString(dg.Data[row][dg.Headers[col]]) + ","
 							}
-							dataString += utilities.GetValueAsString(dg.Data[row][dg.Headers[cursor.Position.SelectEndCol]]) + "\n"
+							dataString += format.GetValueAsString(dg.Data[row][dg.Headers[cursor.Position.SelectEndCol]]) + "\n"
 						}
 					} else {
-						dataString = utilities.GetValueAsString(dg.Data[cursor.Position.Row][dg.Headers[cursor.Position.Col]])
+						dataString = format.GetValueAsString(dg.Data[cursor.Position.Row][dg.Headers[cursor.Position.Col]])
 					}
 					clipboard.Write(clipboard.FmtText, []byte(dataString))
 				}
@@ -268,7 +277,7 @@ func (EditorCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *databa
 			switch {
 			case rl.IsKeyPressed(rl.KeyEscape) || rl.IsKeyPressed(rl.KeyCapsLock): // @TODO: Remove personal preference CapsLock
 				cursor.Handler.Reset(cursor)
-			case utilities.Contains(HANDLED_MOTION_KEY_CODES, int(keyPressed)):
+			case slices.Contains(HANDLED_MOTION_KEY_CODES, int(keyPressed)):
 				cursor.AppendMotion(rune(keyPressed))
 			case rl.IsKeyPressed(rl.KeySlash):
 				cursor.Common.Mode = ModeCommand

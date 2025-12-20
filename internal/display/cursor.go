@@ -8,7 +8,6 @@ import (
 	"github.com/quar15/qq-go/internal/assets"
 	"github.com/quar15/qq-go/internal/colors"
 	"github.com/quar15/qq-go/internal/database"
-	"github.com/quar15/qq-go/internal/utilities"
 )
 
 type CursorMode int8
@@ -219,11 +218,11 @@ func (c *Cursor) IsSelected(col int8, row int32) bool {
 }
 
 var HANDLED_MOTION_KEY_CODES []int = []int{
-	utilities.KeySmallJ, utilities.KeySmallK, utilities.KeySmallH, utilities.KeySmallL,
+	keySmallJ, keySmallK, keySmallH, keySmallL,
 	rl.KeyZero, rl.KeyOne, rl.KeyTwo, rl.KeyThree, rl.KeyFour, rl.KeyFive, rl.KeySix, rl.KeySeven, rl.KeyEight, rl.KeyNine,
-	rl.KeyV, utilities.KeySmallV,
-	rl.KeyG, utilities.KeySmallG,
-	utilities.KeySmallW,
+	rl.KeyV, keySmallV,
+	rl.KeyG, keySmallG,
+	keySmallW,
 }
 
 func (c *Cursor) AppendMotion(char rune) {

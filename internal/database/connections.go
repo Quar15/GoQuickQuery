@@ -7,9 +7,6 @@ import (
 	"time"
 )
 
-var DBConnections map[string]*ConnectionData = make(map[string]*ConnectionData)
-var CurrDBConnection *ConnectionData
-
 type DBConnection interface {
 	// Query executes query in new thread and will return channel that will return result when ready
 	Query(ctx context.Context, query string) (chan queryResult, error)
@@ -34,13 +31,13 @@ type ConnectionData struct {
 	QueryStartTimestamp int64              `yaml:"-"`
 }
 
-func CheckForResult(ctx context.Context, ch chan queryResult, connName string) (dg *DataGrid, done bool, err error) {
+func CheckForResult(ctx context.Context, ch chan queryResult, connData *ConnectionData) (dg *DataGrid, done bool, err error) {
 	dg = &DataGrid{}
 	select {
 	// Check if query timed out
 	case <-ctx.Done():
 		slog.Warn("Timeout:", slog.Any("error", ctx.Err()))
-		DBConnections[connName].ClearConn()
+		connData.ClearConn()
 		return nil, true, fmt.Errorf("Timeout reached | Cancelled query")
 	// Check if query finished
 	case res, ok := <-ch:
@@ -50,12 +47,12 @@ func CheckForResult(ctx context.Context, ch chan queryResult, connName string) (
 		}
 		if res.Err != nil {
 			slog.Error("Failed to execute query", slog.Any("error", res.Err))
-			DBConnections[connName].ClearConn()
+			connData.ClearConn()
 			return nil, true, err
 		}
 		slog.Debug("Query result", slog.Any("res", res))
 		*dg = *res.Results
-		DBConnections[connName].ClearQuery()
+		connData.ClearQuery()
 		return dg, true, nil
 	// Query still running
 	default:

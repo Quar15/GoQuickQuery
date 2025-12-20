@@ -78,12 +78,12 @@ func handleDropFiles(appAssets *assets.Assets, dg *database.DataGrid, eg *displa
 	}
 }
 
-func handleQuery(appAssets *assets.Assets, cursor *display.Cursor, dg *database.DataGrid) {
-	for _, connData := range database.DBConnections {
+func handleQuery(appAssets *assets.Assets, cursor *display.Cursor, dg *database.DataGrid, connManager *database.ConnectionManager) {
+	for _, connData := range connManager.GetAllConnections() {
 		if connData.Conn == nil || connData.ConnCtx == nil || connData.QueryChannel == nil {
 			continue
 		}
-		newDg, done, err := database.CheckForResult(*connData.ConnCtx, connData.QueryChannel, connData.Name)
+		newDg, done, err := database.CheckForResult(*connData.ConnCtx, connData.QueryChannel, connData)
 		if err != nil {
 			slog.Error("Something went wrong during query", slog.Any("error", err))
 			//database.DBConnections[connData.Name].Conn = false
@@ -121,7 +121,7 @@ func main() {
 	}
 	connMgr := database.NewConnectionManager(cfg.Connections, &database.DefaultConnectionFactory{})
 	connMgr.ExecuteQuery(context.Background(), "postgres", "SELECT 1")
-	defer shutdown()
+	defer connMgr.Close(context.Background())
 
 	// --- Init Window ---
 	var screenWidth int = rl.GetScreenWidth()
@@ -188,7 +188,7 @@ func main() {
 		bottomZone.UpdateZoneScroll()
 
 		handleDropFiles(&appAssets, &dg, &eg)
-		handleQuery(&appAssets, display.CurrCursor, &dg)
+		handleQuery(&appAssets, display.CurrCursor, &dg, connMgr)
 		display.CurrCursor.Handler.HandleInput(&appAssets, &dg, &eg, display.CurrCursor)
 
 		// --- Drawing ---
@@ -202,15 +202,9 @@ func main() {
 		splitter.Draw()
 
 		if display.CurrCursor.Type == display.CursorTypeConnections {
-			connectionsZone.DrawConnectionSelector(&appAssets, cfg, display.CursorConnection, int32(screenWidth), int32(screenHeight))
+			connectionsZone.DrawConnectionSelector(&appAssets, cfg, display.CursorConnection, int32(screenWidth), int32(screenHeight), connMgr)
 		}
 
 		rl.EndDrawing()
-	}
-}
-
-func shutdown() {
-	for _, connData := range database.DBConnections {
-		connData.Conn.Close(context.Background())
 	}
 }

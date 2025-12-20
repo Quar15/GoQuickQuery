@@ -8,7 +8,7 @@ import (
 	"github.com/quar15/qq-go/internal/database"
 )
 
-func (z *Zone) DrawConnectionSelector(appAssets *assets.Assets, config *config.Config, cursor *Cursor, screenWidth int32, screenHeight int32) {
+func (z *Zone) DrawConnectionSelector(appAssets *assets.Assets, config *config.Config, cursor *Cursor, screenWidth int32, screenHeight int32, connManager *database.ConnectionManager) {
 	const boxWidth = 300
 	const maxVisibleConnections int = 5
 	const textPadding int32 = 6
@@ -90,14 +90,12 @@ func (z *Zone) DrawConnectionSelector(appAssets *assets.Assets, config *config.C
 	var lastRowToRender int32 = min(cursor.Position.Row+int32(renderedConnectionsN), cursor.Position.MaxRow)
 	for i := firstRowToRender; i <= lastRowToRender; i++ {
 		conn := config.Connections[i]
-		var realConnection *database.ConnectionData = database.DBConnections[conn.Name]
-
 		var displayName = conn.Name
 		if len(displayName) > int(maxNumberOfCharacters) {
 			displayName = displayName[:maxNumberOfCharacters]
 		}
 		var connTextColor rl.Color = colors.Text()
-		if conn.Name == database.CurrDBConnection.Name {
+		if conn.Name == connManager.GetCurrentConnectionName() {
 			connTextColor = colors.Blue()
 		}
 		var cellY float32 = z.Bounds.Y + float32(i*cellHeight) - z.Scroll.Y
@@ -117,7 +115,7 @@ func (z *Zone) DrawConnectionSelector(appAssets *assets.Assets, config *config.C
 			0,
 			rl.White,
 		)
-		if realConnection.Conn != nil {
+		if connManager.IsConnectionAlive(conn.Name) {
 			rl.DrawCircle(boxRectangle.X+iconPadding+iconWidth, int32(cellY)+iconHeight, connStatusCircleRadius, colors.Green())
 		}
 	}

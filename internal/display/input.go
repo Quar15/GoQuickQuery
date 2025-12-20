@@ -6,7 +6,6 @@ import (
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
-	"github.com/quar15/qq-go/internal/config"
 	"github.com/quar15/qq-go/internal/database"
 	"github.com/quar15/qq-go/internal/format"
 	"golang.design/x/clipboard"
@@ -154,7 +153,11 @@ func (ConnectionsCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *d
 		} else {
 			switch {
 			case rl.IsKeyPressed(rl.KeyEnter):
-				database.CurrDBConnection = database.DBConnections[config.Cfg.Connections[CursorConnection.Position.Row].Name]
+				// @TODO: Fix
+				// err := connManager.SetCurrentConnectionByName(config.Cfg.Connections[CursorConnection.Position.Row].Name)
+				//if err != nil {
+				//	slog.Error("Failed to set current connection by name", slog.Any("error", err))
+				//}
 				CursorConnection.TransitionMode(ModeNormal)
 				CurrCursor = CursorSpreadsheet
 			case rl.IsKeyPressed(rl.KeyEscape) || rl.IsKeyPressed(rl.KeyCapsLock): // @TODO: Remove personal preference CapsLock

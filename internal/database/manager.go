@@ -33,6 +33,14 @@ func NewConnectionManager(connConfigs []ConnectionData, factory ConnectionFactor
 	return mgr
 }
 
+func (mgr *ConnectionManager) GetNumberOfConnections() int {
+	return len(mgr.connections)
+}
+
+func (mgr *ConnectionManager) GetAllConnections() map[string]*ConnectionData {
+	return mgr.connections
+}
+
 func (mgr *ConnectionManager) GetConnection(name string) (DBConnection, error) {
 	mgr.mu.Lock()
 	defer mgr.mu.Unlock()
@@ -48,6 +56,27 @@ func (mgr *ConnectionManager) GetConnection(name string) (DBConnection, error) {
 	}
 
 	return connData.Conn, nil
+}
+
+func (mgr *ConnectionManager) SetCurrentConnectionByName(name string) error {
+	mgr.mu.Lock()
+	defer mgr.mu.Unlock()
+
+	connData, ok := mgr.connections[name]
+	if !ok {
+		return fmt.Errorf("Current connection cannot be changed. Connection '%s' not found", name)
+	}
+	mgr.current = connData
+	return nil
+}
+
+func (mgr *ConnectionManager) GetCurrentConnectionName() string {
+	return mgr.current.Name
+}
+
+func (mgr *ConnectionManager) IsConnectionAlive(name string) bool {
+	connData := mgr.connections[name]
+	return connData != nil && connData.Conn.IsAlive()
 }
 
 func (mgr *ConnectionManager) ExecuteQuery(ctx context.Context, connectionKey string, query string) error {
@@ -92,4 +121,10 @@ func (mgr *ConnectionManager) ExecuteQuery(ctx context.Context, connectionKey st
 	connData.QueryStartTimestamp = time.Time.UnixMilli(time.Now())
 
 	return nil
+}
+
+func (mgr *ConnectionManager) Close(ctx context.Context) {
+	for _, connData := range mgr.connections {
+		connData.Conn.Close(ctx)
+	}
 }

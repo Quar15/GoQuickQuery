@@ -68,7 +68,6 @@ func (z *Zone) DrawConnectionSelector(appAssets *assets.Assets, config *config.C
 	z.ContentSize.Y = float32(cellHeight * (cursor.Position.MaxRow + 1))
 	z.ContentSize.X = 0
 	z.ClampScrollsToZoneSize()
-	// rl.DrawRectangleLinesEx(z.Bounds, 2, rl.Red) // @TODO: Remove debug draw
 
 	rl.DrawRectangle(
 		int32(z.Bounds.X),

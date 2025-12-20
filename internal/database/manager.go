@@ -76,7 +76,7 @@ func (mgr *ConnectionManager) GetCurrentConnectionName() string {
 
 func (mgr *ConnectionManager) IsConnectionAlive(name string) bool {
 	connData := mgr.connections[name]
-	return connData != nil && connData.Conn.IsAlive()
+	return connData.Conn != nil && connData.Conn.IsAlive()
 }
 
 func (mgr *ConnectionManager) ExecuteQuery(ctx context.Context, connectionKey string, query string) error {

@@ -242,8 +242,9 @@ func (EditorCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *databa
 				// @TODO: Get query from editor (temp hard code)
 				//query := "SELECT 1;"
 				//query := "SELECT pg_sleep(20)"
-				query := "SELECT * FROM example LIMIT 500;"
-				err := database.QueryData(database.CurrDBConnection.Name, query)
+				//query := "SELECT * FROM example LIMIT 500;"
+				var err error
+				// err := {} // @TODO: FIX //connMgr.ExecuteQuery(database.CurrDBConnection.Name, query)
 				if err != nil {
 					slog.Error("Failed to execute query", slog.Any("error", err))
 					cursor.Common.Logs.Channel <- "Failed to execute query (Something went wrong)"

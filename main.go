@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gen2brain/raylib-go/raylib"
-	"github.com/jackc/pgx/v5"
 	"github.com/lmittmann/tint"
 	"golang.design/x/clipboard"
 
@@ -33,7 +32,6 @@ func initialize(cfg *config.Config) error {
 		slog.Error("Failed to initialize clipboard", slog.Any("error", err))
 		return err
 	}
-	database.InitializeConnections(cfg.Connections)
 
 	return nil
 }
@@ -82,13 +80,13 @@ func handleDropFiles(appAssets *assets.Assets, dg *database.DataGrid, eg *displa
 
 func handleQuery(appAssets *assets.Assets, cursor *display.Cursor, dg *database.DataGrid) {
 	for _, connData := range database.DBConnections {
-		if connData.Conn == false || connData.ConnCtx == nil || connData.QueryChannel == nil {
+		if connData.Conn == nil || connData.ConnCtx == nil || connData.QueryChannel == nil {
 			continue
 		}
 		newDg, done, err := database.CheckForResult(*connData.ConnCtx, connData.QueryChannel, connData.Name)
 		if err != nil {
 			slog.Error("Something went wrong during query", slog.Any("error", err))
-			database.DBConnections[connData.Name].Conn = false
+			//database.DBConnections[connData.Name].Conn = false
 			cursor.Common.Logs.Channel <- fmt.Sprintf("'%s' cancelled after %s", connData.QueryText, connData.GetQueryRuntimeDynamicString())
 		} else if done == true {
 			slog.Debug("Query finished", slog.String("query", connData.QueryText), slog.Any("dg", newDg), slog.Any("error", err))
@@ -121,6 +119,8 @@ func main() {
 	if err != nil {
 		panic("Failed to initialize")
 	}
+	connMgr := database.NewConnectionManager(cfg.Connections, &database.DefaultConnectionFactory{})
+	connMgr.ExecuteQuery(context.Background(), "postgres", "SELECT 1")
 	defer shutdown()
 
 	// --- Init Window ---
@@ -211,9 +211,6 @@ func main() {
 
 func shutdown() {
 	for _, connData := range database.DBConnections {
-		switch c := connData.Conn.(type) {
-		case *pgx.Conn:
-			c.Close(context.Background())
-		}
+		connData.Conn.Close(context.Background())
 	}
 }

@@ -117,7 +117,7 @@ func (z *Zone) DrawConnectionSelector(appAssets *assets.Assets, config *config.C
 			0,
 			rl.White,
 		)
-		if realConnection.Conn != false {
+		if realConnection.Conn != nil {
 			rl.DrawCircle(boxRectangle.X+iconPadding+iconWidth, int32(cellY)+iconHeight, connStatusCircleRadius, colors.Green())
 		}
 	}

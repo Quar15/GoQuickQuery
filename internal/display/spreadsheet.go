@@ -40,8 +40,15 @@ func (z *Zone) DrawSpreadsheetZone(appAssets *assets.Assets, dg *database.DataGr
 	z.ClampScrollsToZoneSize()
 
 	var rowsToRender int8 = z.GetNumberOfVisibleRows(int32(cellHeight)) + 1
-	var firstVisibleRowToScrollIndex int32 = min(max(int32(z.Scroll.Y)/int32(cellHeight), 0), dg.Rows) // Swapping screens creates weird behavior
+	const linesPadding int8 = 2
+	var firstVisibleRowToScrollIndex int32 = min(max(cursor.Position.Row, 0), dg.Rows) // Swapping screens creates weird behavior
 	var lastRowToRender = min(dg.Rows, firstVisibleRowToScrollIndex+int32(rowsToRender))
+	if rowsToRender > 4 {
+		// @TODO: Make window for scrolling
+		topPaddingIndex := max(firstVisibleRowToScrollIndex-2, 0)
+		firstVisibleRowToScrollIndex = topPaddingIndex
+		z.Scroll.Y = float32(cellHeight * int(firstVisibleRowToScrollIndex))
+	}
 
 	rl.BeginScissorMode(int32(z.Bounds.X), int32(z.Bounds.Y), int32(z.Bounds.Width), int32(z.Bounds.Height))
 

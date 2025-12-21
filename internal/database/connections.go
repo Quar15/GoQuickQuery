@@ -31,13 +31,15 @@ type ConnectionData struct {
 	QueryStartTimestamp int64              `yaml:"-"`
 }
 
-func CheckForResult(ctx context.Context, ch chan queryResult, connData *ConnectionData) (dg *DataGrid, done bool, err error) {
+func (c *ConnectionData) CheckForQueryResult() (dg *DataGrid, done bool, err error) {
+	ctx := *c.ConnCtx
+	ch := c.QueryChannel
 	dg = &DataGrid{}
 	select {
 	// Check if query timed out
 	case <-ctx.Done():
 		slog.Warn("Timeout:", slog.Any("error", ctx.Err()))
-		connData.ClearConn()
+		c.ClearConn()
 		return nil, true, fmt.Errorf("Timeout reached | Cancelled query")
 	// Check if query finished
 	case res, ok := <-ch:
@@ -47,12 +49,12 @@ func CheckForResult(ctx context.Context, ch chan queryResult, connData *Connecti
 		}
 		if res.Err != nil {
 			slog.Error("Failed to execute query", slog.Any("error", res.Err))
-			connData.ClearConn()
+			c.ClearConn()
 			return nil, true, err
 		}
 		slog.Debug("Query result", slog.Any("res", res))
 		*dg = *res.Results
-		connData.ClearQuery()
+		c.ClearQuery()
 		return dg, true, nil
 	// Query still running
 	default:

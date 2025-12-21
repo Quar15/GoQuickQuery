@@ -125,6 +125,8 @@ func (mgr *ConnectionManager) ExecuteQuery(ctx context.Context, connectionKey st
 
 func (mgr *ConnectionManager) Close(ctx context.Context) {
 	for _, connData := range mgr.connections {
-		connData.Conn.Close(ctx)
+		if connData.Conn != nil {
+			connData.Conn.Close(ctx)
+		}
 	}
 }

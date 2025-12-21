@@ -78,7 +78,7 @@ type CursorCommon struct {
 }
 
 type CursorHandler interface {
-	HandleInput(appAssets *assets.Assets, dg *database.DataGrid, eg *EditorGrid, cursor *Cursor)
+	HandleInput(appAssets *assets.Assets, dg *database.DataGrid, eg *EditorGrid, cursor *Cursor, connManager *database.ConnectionManager)
 	Reset(c *Cursor)
 	Init(c *Cursor, z *Zone)
 }
@@ -328,7 +328,7 @@ func (ConnectionsCursorStateHandler) Init(c *Cursor, z *Zone) {
 	c.Common.Logs.Init()
 	c.Handler.Reset(c)
 	c.Position.MaxCol = 0
-	c.Position.MaxRow = int32(6) - 1 // @TODO: int32(connManager.GetNumberOFConnections())
+	c.Position.MaxRow = 0 // @TODO: int32(connManager.GetNumberOFConnections())
 	c.Zone = z
 }
 

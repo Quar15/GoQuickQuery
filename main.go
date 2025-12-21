@@ -152,6 +152,7 @@ func main() {
 	display.CursorEditor.Handler.Init(display.CursorEditor, &topZone)
 	display.CursorSpreadsheet.Handler.Init(display.CursorSpreadsheet, &bottomZone)
 	display.CursorConnection.Handler.Init(display.CursorConnection, &connectionsZone)
+	display.CursorConnection.Position.MaxRow = int32(connMgr.GetNumberOfConnections()) - 1
 	display.CurrCursor = display.CursorEditor
 
 	topZone.ContentSize = rl.Vector2{X: 1600, Y: 1200}
@@ -189,7 +190,7 @@ func main() {
 
 		handleDropFiles(&appAssets, &dg, &eg)
 		handleQuery(&appAssets, display.CurrCursor, &dg, connMgr)
-		display.CurrCursor.Handler.HandleInput(&appAssets, &dg, &eg, display.CurrCursor)
+		display.CurrCursor.Handler.HandleInput(&appAssets, &dg, &eg, display.CurrCursor, connMgr)
 
 		// --- Drawing ---
 		rl.BeginDrawing()
@@ -197,7 +198,7 @@ func main() {
 
 		topZone.DrawEditor(&appAssets, &eg)
 		bottomZone.DrawSpreadsheetZone(&appAssets, &dg, display.CursorSpreadsheet)
-		commandZone.DrawCommandZone(&appAssets, display.CurrCursor)
+		commandZone.DrawCommandZone(&appAssets, display.CurrCursor, connMgr.GetCurrentConnectionName())
 
 		splitter.Draw()
 

@@ -1,11 +1,13 @@
 package display
 
 import (
+	"context"
 	"log/slog"
 	"slices"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
+	"github.com/quar15/qq-go/internal/config"
 	"github.com/quar15/qq-go/internal/database"
 	"github.com/quar15/qq-go/internal/format"
 	"golang.design/x/clipboard"
@@ -19,7 +21,7 @@ const keySmallL int = 108
 const keySmallV int = 118
 const keySmallW int = 119
 
-func (SpreadsheetCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *database.DataGrid, eg *EditorGrid, cursor *Cursor) {
+func (SpreadsheetCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *database.DataGrid, eg *EditorGrid, cursor *Cursor, connManager *database.ConnectionManager) {
 	const cellHeight int32 = 30 // @TODO: Pass configuration with cellHeight
 	var keyPressed int32 = rl.GetCharPressed()
 
@@ -128,7 +130,7 @@ func (SpreadsheetCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *d
 	cursor.UpdateSelectBasedOnPosition()
 }
 
-func (ConnectionsCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *database.DataGrid, eg *EditorGrid, cursor *Cursor) {
+func (ConnectionsCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *database.DataGrid, eg *EditorGrid, cursor *Cursor, connManager *database.ConnectionManager) {
 	var keyPressed int32 = rl.GetCharPressed()
 
 	switch cursor.Common.Mode {
@@ -153,11 +155,10 @@ func (ConnectionsCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *d
 		} else {
 			switch {
 			case rl.IsKeyPressed(rl.KeyEnter):
-				// @TODO: Fix
-				// err := connManager.SetCurrentConnectionByName(config.Cfg.Connections[CursorConnection.Position.Row].Name)
-				//if err != nil {
-				//	slog.Error("Failed to set current connection by name", slog.Any("error", err))
-				//}
+				err := connManager.SetCurrentConnectionByName(config.Cfg.Connections[CursorConnection.Position.Row].Name)
+				if err != nil {
+					slog.Error("Failed to set current connection by name", slog.Any("error", err))
+				}
 				CursorConnection.TransitionMode(ModeNormal)
 				CurrCursor = CursorSpreadsheet
 			case rl.IsKeyPressed(rl.KeyEscape) || rl.IsKeyPressed(rl.KeyCapsLock): // @TODO: Remove personal preference CapsLock
@@ -207,7 +208,7 @@ func (ConnectionsCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *d
 	cursor.UpdateSelectBasedOnPosition()
 }
 
-func (EditorCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *database.DataGrid, eg *EditorGrid, cursor *Cursor) {
+func (EditorCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *database.DataGrid, eg *EditorGrid, cursor *Cursor, connManager *database.ConnectionManager) {
 	const cellHeight int32 = 30 // @TODO: Pass configuration with cellHeight
 	var keyPressed int32 = rl.GetCharPressed()
 
@@ -243,11 +244,10 @@ func (EditorCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *databa
 			switch {
 			case rl.IsKeyPressed(rl.KeyEnter):
 				// @TODO: Get query from editor (temp hard code)
-				//query := "SELECT 1;"
+				query := "SELECT 1;"
 				//query := "SELECT pg_sleep(20)"
 				//query := "SELECT * FROM example LIMIT 500;"
-				var err error
-				// err := {} // @TODO: FIX //connMgr.ExecuteQuery(database.CurrDBConnection.Name, query)
+				err := connManager.ExecuteQuery(context.Background(), connManager.GetCurrentConnectionName(), query)
 				if err != nil {
 					slog.Error("Failed to execute query", slog.Any("error", err))
 					cursor.Common.Logs.Channel <- "Failed to execute query (Something went wrong)"

@@ -5,19 +5,25 @@ import (
 	"fmt"
 	"log/slog"
 	"time"
-
-	"github.com/jackc/pgx/v5"
 )
 
-var DBConnections map[string]*ConnectionData = make(map[string]*ConnectionData)
-var CurrDBConnection *ConnectionData
+type DBConnection interface {
+	// Query executes query in new thread and will return channel that will return result when ready
+	Query(ctx context.Context, query string) (chan queryResult, error)
+
+	// Close terminates the connection gracefully
+	Close(ctx context.Context) error
+
+	// IsAlive checks if the connection is still valid
+	IsAlive() bool
+}
 
 type ConnectionData struct {
 	Name                string             `yaml:"name"`
 	Driver              string             `yaml:"driver"`
 	ConnString          string             `yaml:"conn"`
 	QueryTimeout        int                `yaml:"timeout"`
-	Conn                any                `yaml:"-"`
+	Conn                DBConnection       `yaml:"-"`
 	ConnCtx             *context.Context   `yaml:"-"`
 	ConnCtxCancel       context.CancelFunc `yaml:"-"`
 	QueryChannel        chan queryResult   `yaml:"-"`
@@ -25,72 +31,13 @@ type ConnectionData struct {
 	QueryStartTimestamp int64              `yaml:"-"`
 }
 
-func InitializeConnections(connections []ConnectionData) {
-	if len(connections) == 0 {
-		slog.Error("No connections initialized")
-		return
-	}
-	for _, c := range connections {
-		c.Conn = false
-		DBConnections[c.Name] = &c
-	}
-	CurrDBConnection = &connections[0]
-}
-
-func QueryData(connectionKey string, query string) error {
-	// Find conn in map
-	connData, ok := DBConnections[connectionKey]
-	if !ok {
-		return fmt.Errorf("No connection '%s' found", connectionKey)
-	}
-
-	if connData.QueryChannel != nil && connData.ConnCtxCancel != nil {
-		connData.ConnCtxCancel()
-		return nil
-	}
-
-	switch connData.Driver {
-	case "postgresql":
-		if err := InitPostgresConnection(connData); err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("Driver of type '%s' is not handled", connData.Driver)
-	}
-	// Setup query timeout
-	var ctx context.Context
-	if connData.QueryTimeout > 0 {
-		var cancelCtx context.CancelFunc
-		ctx, cancelCtx = context.WithTimeout(context.Background(), time.Duration(connData.QueryTimeout)*time.Second)
-		connData.ConnCtxCancel = cancelCtx
-	} else {
-		ctx = context.Background()
-	}
-	// Query data depending of type of connection
-	connData.QueryText = query
-	var err error
-	switch c := connData.Conn.(type) {
-	case *pgx.Conn:
-		connData.ConnCtx = &ctx
-		connData.QueryChannel = nil
-		connData.QueryChannel, err = QueryRows(*connData.ConnCtx, c, query)
-		if err != nil {
-			connData.ClearConn()
-			return err
-		}
-		connData.QueryStartTimestamp = time.Time.UnixMilli(time.Now())
-	}
-
-	return nil
-}
-
-func CheckForResult(ctx context.Context, ch chan queryResult, connName string) (dg *DataGrid, done bool, err error) {
+func CheckForResult(ctx context.Context, ch chan queryResult, connData *ConnectionData) (dg *DataGrid, done bool, err error) {
 	dg = &DataGrid{}
 	select {
 	// Check if query timed out
 	case <-ctx.Done():
 		slog.Warn("Timeout:", slog.Any("error", ctx.Err()))
-		DBConnections[connName].ClearConn()
+		connData.ClearConn()
 		return nil, true, fmt.Errorf("Timeout reached | Cancelled query")
 	// Check if query finished
 	case res, ok := <-ch:
@@ -100,12 +47,12 @@ func CheckForResult(ctx context.Context, ch chan queryResult, connName string) (
 		}
 		if res.Err != nil {
 			slog.Error("Failed to execute query", slog.Any("error", res.Err))
-			DBConnections[connName].ClearConn()
+			connData.ClearConn()
 			return nil, true, err
 		}
 		slog.Debug("Query result", slog.Any("res", res))
 		*dg = *res.Results
-		DBConnections[connName].ClearQuery()
+		connData.ClearQuery()
 		return dg, true, nil
 	// Query still running
 	default:
@@ -115,7 +62,7 @@ func CheckForResult(ctx context.Context, ch chan queryResult, connName string) (
 
 func (c *ConnectionData) ClearConn() {
 	c.ClearQuery()
-	c.Conn = false
+	c.Conn = nil
 }
 
 func (c *ConnectionData) ClearQuery() {

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gen2brain/raylib-go/raylib"
-	"github.com/jackc/pgx/v5"
 	"github.com/lmittmann/tint"
 	"golang.design/x/clipboard"
 
@@ -33,7 +32,6 @@ func initialize(cfg *config.Config) error {
 		slog.Error("Failed to initialize clipboard", slog.Any("error", err))
 		return err
 	}
-	database.InitializeConnections(cfg.Connections)
 
 	return nil
 }
@@ -80,15 +78,15 @@ func handleDropFiles(appAssets *assets.Assets, dg *database.DataGrid, eg *displa
 	}
 }
 
-func handleQuery(appAssets *assets.Assets, cursor *display.Cursor, dg *database.DataGrid) {
-	for _, connData := range database.DBConnections {
-		if connData.Conn == false || connData.ConnCtx == nil || connData.QueryChannel == nil {
+func handleQuery(appAssets *assets.Assets, cursor *display.Cursor, dg *database.DataGrid, connManager *database.ConnectionManager) {
+	for _, connData := range connManager.GetAllConnections() {
+		if connData.Conn == nil || connData.ConnCtx == nil || connData.QueryChannel == nil {
 			continue
 		}
-		newDg, done, err := database.CheckForResult(*connData.ConnCtx, connData.QueryChannel, connData.Name)
+		newDg, done, err := database.CheckForResult(*connData.ConnCtx, connData.QueryChannel, connData)
 		if err != nil {
 			slog.Error("Something went wrong during query", slog.Any("error", err))
-			database.DBConnections[connData.Name].Conn = false
+			//database.DBConnections[connData.Name].Conn = false
 			cursor.Common.Logs.Channel <- fmt.Sprintf("'%s' cancelled after %s", connData.QueryText, connData.GetQueryRuntimeDynamicString())
 		} else if done == true {
 			slog.Debug("Query finished", slog.String("query", connData.QueryText), slog.Any("dg", newDg), slog.Any("error", err))
@@ -121,7 +119,9 @@ func main() {
 	if err != nil {
 		panic("Failed to initialize")
 	}
-	defer shutdown()
+	connMgr := database.NewConnectionManager(cfg.Connections, &database.DefaultConnectionFactory{})
+	connMgr.ExecuteQuery(context.Background(), "postgres", "SELECT 1")
+	defer connMgr.Close(context.Background())
 
 	// --- Init Window ---
 	var screenWidth int = rl.GetScreenWidth()
@@ -152,6 +152,7 @@ func main() {
 	display.CursorEditor.Handler.Init(display.CursorEditor, &topZone)
 	display.CursorSpreadsheet.Handler.Init(display.CursorSpreadsheet, &bottomZone)
 	display.CursorConnection.Handler.Init(display.CursorConnection, &connectionsZone)
+	display.CursorConnection.Position.MaxRow = int32(connMgr.GetNumberOfConnections()) - 1
 	display.CurrCursor = display.CursorEditor
 
 	topZone.ContentSize = rl.Vector2{X: 1600, Y: 1200}
@@ -188,8 +189,8 @@ func main() {
 		bottomZone.UpdateZoneScroll()
 
 		handleDropFiles(&appAssets, &dg, &eg)
-		handleQuery(&appAssets, display.CurrCursor, &dg)
-		display.CurrCursor.Handler.HandleInput(&appAssets, &dg, &eg, display.CurrCursor)
+		handleQuery(&appAssets, display.CurrCursor, &dg, connMgr)
+		display.CurrCursor.Handler.HandleInput(&appAssets, &dg, &eg, display.CurrCursor, connMgr)
 
 		// --- Drawing ---
 		rl.BeginDrawing()
@@ -197,23 +198,14 @@ func main() {
 
 		topZone.DrawEditor(&appAssets, &eg)
 		bottomZone.DrawSpreadsheetZone(&appAssets, &dg, display.CursorSpreadsheet)
-		commandZone.DrawCommandZone(&appAssets, display.CurrCursor)
+		commandZone.DrawCommandZone(&appAssets, display.CurrCursor, connMgr.GetCurrentConnectionName())
 
 		splitter.Draw()
 
 		if display.CurrCursor.Type == display.CursorTypeConnections {
-			connectionsZone.DrawConnectionSelector(&appAssets, cfg, display.CursorConnection, int32(screenWidth), int32(screenHeight))
+			connectionsZone.DrawConnectionSelector(&appAssets, cfg, display.CursorConnection, int32(screenWidth), int32(screenHeight), connMgr)
 		}
 
 		rl.EndDrawing()
-	}
-}
-
-func shutdown() {
-	for _, connData := range database.DBConnections {
-		switch c := connData.Conn.(type) {
-		case *pgx.Conn:
-			c.Close(context.Background())
-		}
 	}
 }

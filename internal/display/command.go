@@ -6,10 +6,9 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
 	"github.com/quar15/qq-go/internal/colors"
-	"github.com/quar15/qq-go/internal/database"
 )
 
-func (z *Zone) DrawCommandZone(appAssets *assets.Assets, c *Cursor) {
+func (z *Zone) DrawCommandZone(appAssets *assets.Assets, c *Cursor, currConnName string) {
 	const textSpacing float32 = 4
 	var statusLineColor rl.Color = c.Common.Mode.Color()
 	// Status Line
@@ -25,7 +24,7 @@ func (z *Zone) DrawCommandZone(appAssets *assets.Assets, c *Cursor) {
 	rl.DrawRectangle(int32(z.Bounds.Width-detailsStatusWidth), int32(z.Bounds.Y), int32(detailsStatusWidth), int32(z.Bounds.Height/2), statusLineColor)
 	appAssets.DrawTextMainFont(detailsStatusText, rl.Vector2{X: z.Bounds.Width - z.Bounds.X - detailsStatusWidth + textSpacing*2, Y: z.Bounds.Y + textSpacing/2}, colors.Mantle())
 
-	var connectionStatusText = database.CurrDBConnection.Name
+	var connectionStatusText = currConnName
 	var connectionStatusTextWidth float32 = appAssets.MeasureTextMainFont(connectionStatusText).X
 	var connectionStatusTextX float32 = z.Bounds.Width - z.Bounds.X - detailsStatusWidth - connectionStatusTextWidth - textSpacing*2
 	appAssets.DrawTextMainFont(
@@ -36,7 +35,7 @@ func (z *Zone) DrawCommandZone(appAssets *assets.Assets, c *Cursor) {
 	const iconWidth int32 = 16
 	const iconHeight int32 = 16
 	rl.DrawTexturePro(
-		appAssets.Icons[database.CurrDBConnection.Driver],
+		appAssets.Icons["postgresql"],
 		rl.Rectangle{X: 0, Y: 0, Width: float32(iconWidth), Height: float32(iconHeight)},
 		rl.Rectangle{X: connectionStatusTextX - textSpacing*2 - float32(iconWidth), Y: z.Bounds.Y + textSpacing/2, Width: float32(iconWidth), Height: float32(iconHeight)},
 		rl.Vector2{X: 0, Y: 0},

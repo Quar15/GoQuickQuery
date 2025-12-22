@@ -45,15 +45,15 @@ func (cm CursorMode) Color() rl.Color {
 }
 
 type CursorPosition struct {
-	Col             int8
+	Col             int32
 	Row             int32
-	MaxCol          int8
+	MaxCol          int32
 	MaxRow          int32
-	SelectStartCol  int8
+	SelectStartCol  int32
 	SelectStartRow  int32
-	SelectEndCol    int8
+	SelectEndCol    int32
 	SelectEndRow    int32
-	SelectAnchorCol int8
+	SelectAnchorCol int32
 	SelectAnchorRow int32
 }
 
@@ -142,7 +142,7 @@ func (c *Cursor) TransitionMode(newMode CursorMode) {
 	c.Common.Mode = newMode
 }
 
-func (c *Cursor) SetSelect(startCol int8, startRow int32, endCol int8, endRow int32) {
+func (c *Cursor) SetSelect(startCol int32, startRow int32, endCol int32, endRow int32) {
 	c.Position.SelectStartCol = startCol
 	c.Position.SelectStartRow = startRow
 	c.Position.SelectEndCol = endCol
@@ -192,11 +192,11 @@ func (c *Cursor) UpdateSelectBasedOnPosition() {
 	}
 }
 
-func (c *Cursor) IsFocused(col int8, row int32) bool {
+func (c *Cursor) IsFocused(col int32, row int32) bool {
 	return c.Position.Col == col && c.Position.Row == row
 }
 
-func (c *Cursor) ClampFocus(limitCol int8, limitRow int32) {
+func (c *Cursor) ClampFocus(limitCol int32, limitRow int32) {
 	c.Position.MaxCol = limitCol
 	c.Position.MaxRow = limitRow
 	c.Position.Col = min(max(0, c.Position.Col), c.Position.MaxCol)
@@ -209,7 +209,7 @@ func (c *Cursor) ClampFocus(limitCol int8, limitRow int32) {
 	}
 }
 
-func (c *Cursor) IsSelected(col int8, row int32) bool {
+func (c *Cursor) IsSelected(col int32, row int32) bool {
 	if c.Common.Mode != ModeVisual && c.Common.Mode != ModeVLine {
 		return false
 	}
@@ -286,10 +286,10 @@ func (c *Cursor) CheckForMotion() {
 				c.Position.Row -= int32(num)
 				motionExecuted = true
 			case "h":
-				c.Position.Col -= int8(num)
+				c.Position.Col -= int32(num)
 				motionExecuted = true
 			case "l":
-				c.Position.Col += int8(num)
+				c.Position.Col += int32(num)
 				motionExecuted = true
 			case "G":
 				c.Position.Row = int32(num - 1)

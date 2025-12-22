@@ -15,7 +15,7 @@ type DataGrid struct {
 	Headers      []string
 	ColumnsWidth []int32
 	Rows         int32
-	Cols         int8
+	Cols         int32
 }
 
 func (dg *DataGrid) FakeInit(appAssets *assets.Assets) {
@@ -26,7 +26,7 @@ func (dg *DataGrid) FakeInit(appAssets *assets.Assets) {
 	}
 	dg.Headers = []string{"ID", "name", "created_at"}
 	dg.Rows = int32(len(dg.Data))
-	dg.Cols = int8(len(dg.Data[0]))
+	dg.Cols = int32(len(dg.Data[0]))
 	dg.UpdateColumnsWidth(appAssets)
 }
 
@@ -63,7 +63,7 @@ func LoadDataGridFromCSV(path string, appAssets *assets.Assets) (*DataGrid, erro
 	if err != nil {
 		return nil, err
 	}
-	dg.Cols = int8(len(dg.Headers))
+	dg.Cols = int32(len(dg.Headers))
 
 	dg.Data = []map[string]any{}
 	dg.Rows = 0

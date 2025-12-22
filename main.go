@@ -20,7 +20,7 @@ import (
 	"github.com/quar15/qq-go/internal/format"
 )
 
-func initialize(cfg *config.Config) error {
+func initialize() error {
 	slog.SetDefault(slog.New(
 		tint.NewHandler(os.Stdout, &tint.Options{
 			Level:      slog.LevelDebug,
@@ -55,7 +55,7 @@ func handleDropFiles(appAssets *assets.Assets, dg *database.DataGrid, eg *displa
 				*eg = *newEg
 				display.CursorEditor.Handler.Reset(display.CursorSpreadsheet)
 				display.CursorEditor.Position.MaxCol = 1
-				display.CursorEditor.Position.MaxRow = eg.Rows - 1
+				display.CursorEditor.Position.MaxRow = eg.Rows
 				display.CursorEditor.Common.Logs.Channel <- fmt.Sprintf("Loaded sql file '%s'", droppedFilesPaths[0])
 			}
 		case ".csv":
@@ -83,10 +83,10 @@ func handleQuery(appAssets *assets.Assets, cursor *display.Cursor, dg *database.
 		if connData.Conn == nil || connData.ConnCtx == nil || connData.QueryChannel == nil {
 			continue
 		}
-		newDg, done, err := database.CheckForResult(*connData.ConnCtx, connData.QueryChannel, connData)
+		newDg, done, err := connData.CheckForQueryResult()
 		if err != nil {
 			slog.Error("Something went wrong during query", slog.Any("error", err))
-			//database.DBConnections[connData.Name].Conn = false
+			connData.Conn = nil
 			cursor.Common.Logs.Channel <- fmt.Sprintf("'%s' cancelled after %s", connData.QueryText, connData.GetQueryRuntimeDynamicString())
 		} else if done == true {
 			slog.Debug("Query finished", slog.String("query", connData.QueryText), slog.Any("dg", newDg), slog.Any("error", err))
@@ -115,7 +115,7 @@ func main() {
 		os.Exit(1)
 	}
 	*config.Cfg = *cfg
-	err = initialize(cfg)
+	err = initialize()
 	if err != nil {
 		panic("Failed to initialize")
 	}
@@ -196,7 +196,8 @@ func main() {
 		rl.BeginDrawing()
 		rl.ClearBackground(colors.Background())
 
-		topZone.DrawEditor(&appAssets, &eg)
+		editorIsFocused := (display.CurrCursor.Type == display.CursorTypeEditor)
+		topZone.DrawEditor(&appAssets, &eg, editorIsFocused)
 		bottomZone.DrawSpreadsheetZone(&appAssets, &dg, display.CursorSpreadsheet)
 		commandZone.DrawCommandZone(&appAssets, display.CurrCursor, connMgr.GetCurrentConnectionName())
 

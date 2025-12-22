@@ -31,7 +31,7 @@ func (SpreadsheetCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *d
 	if rl.CheckCollisionPointRec(mouse, cursor.Zone.Bounds) {
 		if rl.IsKeyDown(rl.KeyLeftShift) {
 			// Mouse wheel scroll (horizontal)
-			cursor.Position.Col -= int8(rl.GetMouseWheelMove()) * int8(mouseWheelStep)
+			cursor.Position.Col -= int32(rl.GetMouseWheelMove()) * int32(mouseWheelStep)
 		} else {
 			// Mouse wheel scroll (vertical)
 			cursor.Position.Row -= int32(rl.GetMouseWheelMove()) * mouseWheelStep
@@ -218,7 +218,7 @@ func (EditorCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *databa
 	if rl.CheckCollisionPointRec(mouse, cursor.Zone.Bounds) {
 		if rl.IsKeyDown(rl.KeyLeftShift) {
 			// Mouse wheel scroll (horizontal)
-			cursor.Position.Col -= int8(rl.GetMouseWheelMove()) * int8(mouseWheelStep)
+			cursor.Position.Col -= int32(rl.GetMouseWheelMove()) * int32(mouseWheelStep)
 		} else {
 			// Mouse wheel scroll (vertical)
 			cursor.Position.Row -= int32(rl.GetMouseWheelMove()) * mouseWheelStep
@@ -331,6 +331,6 @@ func (EditorCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *databa
 	} else if cursor.Position.Row < 0 {
 		cursor.Position.Row = 0
 	}
-	cursor.ClampFocus(eg.Cols[cursor.Position.Row]-1, eg.Rows-1)
+	cursor.ClampFocus(eg.Cols[cursor.Position.Row]-1, eg.Rows)
 	cursor.UpdateSelectBasedOnPosition()
 }

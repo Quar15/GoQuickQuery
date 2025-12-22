@@ -21,11 +21,12 @@ func (z *Zone) DrawSpreadsheetZone(appAssets *assets.Assets, dg *database.DataGr
 		contentWidth                 int = counterColumnWidth
 		contentHeight                int = cellHeight * (int(dg.Rows) + 2)
 	)
-	for col := int8(0); col < dg.Cols; col++ {
+	for col := int32(0); col < dg.Cols; col++ {
 		contentWidth += int(dg.ColumnsWidth[col])
 	}
 
-	scrollRow, lastRowToRender := updateScrollBasedOnCursor(z, dg, cursor, cellHeight)
+	const linesPadding int8 = 2
+	scrollRow, lastRowToRender := updateSpreadsheetScrollBasedOnCursor(z, dg, cursor, cellHeight, linesPadding)
 
 	rl.BeginScissorMode(int32(z.Bounds.X), int32(z.Bounds.Y), int32(z.Bounds.Width), int32(z.Bounds.Height))
 
@@ -60,18 +61,18 @@ func renderContentRow(z *Zone, appAssets *assets.Assets, dg *database.DataGrid, 
 
 		var cellBackgroundColor rl.Color = colors.Background()
 		var cellBorderColor rl.Color = colors.Mantle()
-		if cursor.IsFocused(int8(col), row) {
+		if cursor.IsFocused(int32(col), row) {
 			cellBackgroundColor = colors.Mantle()
 			cellBorderColor = colors.Blue()
 		}
-		if cursor.IsSelected(int8(col), row) {
+		if cursor.IsSelected(int32(col), row) {
 			cellBackgroundColor = colors.Surface1()
 		}
 		var cellRect rl.RectangleInt32 = rl.RectangleInt32{X: cellX, Y: cellY, Width: dg.ColumnsWidth[col], Height: int32(cellHeight)}
 		rl.DrawRectangleRec(cellRect.ToFloat32(), cellBackgroundColor)
 		if rl.CheckCollisionPointRec(mouse, cellRect.ToFloat32()) {
 			if rl.IsMouseButtonPressed(rl.MouseButtonLeft) {
-				cursor.Position.Col = int8(col)
+				cursor.Position.Col = int32(col)
 				cursor.Position.Row = row
 			}
 		}
@@ -114,9 +115,9 @@ func renderCounterColumnRow(z *Zone, appAssets *assets.Assets, counterColumnWidt
 }
 
 func renderHeadersRow(z *Zone, appAssets *assets.Assets, dg *database.DataGrid, counterColumnWidth int, cellHeight int, textPadding int32, mouse rl.Vector2) {
-	for col := int8(0); col < dg.Cols; col++ {
+	for col := int32(0); col < dg.Cols; col++ {
 		var cellX int32 = int32(z.Bounds.X-z.Scroll.X) + int32(counterColumnWidth)
-		for c := int8(0); c < col; c++ {
+		for c := int32(0); c < col; c++ {
 			cellX += dg.ColumnsWidth[c]
 		}
 		var cellY int32 = int32(z.Bounds.Y)
@@ -131,14 +132,13 @@ func renderHeadersRow(z *Zone, appAssets *assets.Assets, dg *database.DataGrid, 
 	}
 }
 
-func updateScrollBasedOnCursor(z *Zone, dg *database.DataGrid, cursor *Cursor, cellHeight int) (scrollRow int32, lastRowToRender int32) {
+func updateSpreadsheetScrollBasedOnCursor(z *Zone, dg *database.DataGrid, cursor *Cursor, cellHeight int, linesPadding int8) (scrollRow int32, lastRowToRender int32) {
 	z.Scroll.X = 0
-	for col := int8(0); col < cursor.Position.Col; col++ {
+	for col := int32(0); col < cursor.Position.Col; col++ {
 		z.Scroll.X += float32(dg.ColumnsWidth[col])
 	}
 
 	var rowsToRender int8 = z.GetNumberOfVisibleRows(int32(cellHeight)) + 1
-	const linesPadding int8 = 2
 	scrollRow = int32(z.Scroll.Y) / int32(cellHeight)
 	if rowsToRender > linesPadding*2 {
 		if cursor.Position.Row < scrollRow+int32(linesPadding) {
@@ -147,6 +147,9 @@ func updateScrollBasedOnCursor(z *Zone, dg *database.DataGrid, cursor *Cursor, c
 
 		if cursor.Position.Row >= scrollRow+int32(rowsToRender)-int32(linesPadding) {
 			scrollRow = cursor.Position.Row - int32(rowsToRender-linesPadding-1)
+			if cursor.Position.Row >= cursor.Position.MaxRow-int32(linesPadding) {
+				scrollRow -= int32(linesPadding) - (cursor.Position.MaxRow - cursor.Position.Row)
+			}
 		}
 
 		z.Scroll.Y = float32(cellHeight * int(scrollRow))

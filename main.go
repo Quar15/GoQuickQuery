@@ -55,7 +55,7 @@ func handleDropFiles(appAssets *assets.Assets, dg *database.DataGrid, eg *displa
 				*eg = *newEg
 				display.CursorEditor.Handler.Reset(display.CursorSpreadsheet)
 				display.CursorEditor.Position.MaxCol = 1
-				display.CursorEditor.Position.MaxRow = eg.Rows - 1
+				display.CursorEditor.Position.MaxRow = eg.Rows
 				display.CursorEditor.Common.Logs.Channel <- fmt.Sprintf("Loaded sql file '%s'", droppedFilesPaths[0])
 			}
 		case ".csv":

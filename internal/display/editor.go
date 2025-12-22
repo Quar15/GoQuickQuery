@@ -14,47 +14,47 @@ func (z *Zone) DrawEditor(appAssets *assets.Assets, eg *EditorGrid, shouldDrawCu
 	const textPadding int32 = 6
 	const rowsInitialPadding int32 = 16
 
-	var contentHeight int = 0
-
-	var counterColumnCharactersCount int = format.CountDigits(int(eg.Rows))
-	var counterColumnWidth int = int(appAssets.MainFontCharacterWidth)*counterColumnCharactersCount + int(textPadding*2)
-
-	var rowsToRender int8 = z.GetNumberOfVisibleRows(int32(cellHeight)) + 1
-	var firstVisibleRowToScrollIndex int32 = min(max(int32(z.Scroll.Y)/int32(cellHeight), 0), eg.Rows) // Swapping screens creates weird behavior
-	var lastRowToRender = min(eg.Rows, firstVisibleRowToScrollIndex+int32(rowsToRender))
+	var (
+		contentHeight                int = cellHeight*int(eg.Rows+1) + int(rowsInitialPadding)
+		counterColumnCharactersCount int = format.CountDigits(int(eg.Rows))
+		counterColumnWidth           int = int(appAssets.MainFontCharacterWidth)*counterColumnCharactersCount + int(textPadding*2)
+	)
+	const linesPadding int8 = 4
+	scrollRow, lastRowToRender := updateEditorScrollBasedOnCursor(z, CursorEditor, cellHeight, linesPadding)
 
 	rl.BeginScissorMode(int32(z.Bounds.X), int32(z.Bounds.Y), int32(z.Bounds.Width), int32(z.Bounds.Height))
 	rl.ClearBackground(colors.Background())
 
 	// Draw text
-	for row := firstVisibleRowToScrollIndex; row < lastRowToRender; row++ {
-		var cellY float32 = z.Bounds.Y + float32(row*int32(cellHeight)) - z.Scroll.Y + float32(rowsInitialPadding) + float32(textPadding)
+	for row := scrollRow; row < lastRowToRender; row++ {
+		var cellY float32 = z.Bounds.Y + float32(row*int32(cellHeight)) - z.Scroll.Y + float32(rowsInitialPadding)
 		if eg.Highlight[row] != nil {
-			for c := range eg.Text[row] {
-				var cellX float32 = z.Bounds.X + float32(counterColumnWidth) + float32(textPadding) + float32(c*int(appAssets.MainFontCharacterWidth))
+			for col := range eg.Text[row] {
+				var cellX float32 = z.Bounds.X + float32(counterColumnWidth) + float32(textPadding) + float32(col*int(appAssets.MainFontCharacterWidth))
 				rl.DrawTextEx(
 					appAssets.MainFont,
-					string(eg.Text[row][c]),
+					string(eg.Text[row][col]),
 					rl.Vector2{X: float32(cellX), Y: float32(cellY)},
 					appAssets.MainFontSize,
 					appAssets.MainFontSpacing,
-					eg.Highlight[row][c].Color(),
+					eg.Highlight[row][col].Color(),
 				)
 			}
 		}
 	}
 	// Draw row counter
-	for row := firstVisibleRowToScrollIndex; row < lastRowToRender; row++ {
+	for row := scrollRow; row < lastRowToRender; row++ {
 		var counterColumnLeftPadding float32 = float32(textPadding) + float32(counterColumnCharactersCount-format.CountDigits(int(row)+1))*appAssets.MainFontCharacterWidth
 		var cellX float32 = z.Bounds.X + counterColumnLeftPadding
-		var cellY float32 = z.Bounds.Y + float32(row*int32(cellHeight)) - z.Scroll.Y + float32(rowsInitialPadding) + float32(textPadding)
+		var cellY float32 = z.Bounds.Y + float32(row*int32(cellHeight)) - z.Scroll.Y + float32(rowsInitialPadding)
 		appAssets.DrawTextMainFont(strconv.Itoa(int(row+1)), rl.Vector2{X: cellX, Y: cellY}, colors.Overlay0())
 	}
 	// Draw Cursor
 	if shouldDrawCursor {
+		var cellY float32 = z.Bounds.Y + float32(CursorEditor.Position.Row*int32(cellHeight)) - z.Scroll.Y + float32(rowsInitialPadding)
+		var cellX float32 = z.Bounds.X + float32(counterColumnWidth) + float32(textPadding)
 		if eg.Cols[CursorEditor.Position.Row] > 0 {
-			var cellY float32 = z.Bounds.Y + float32(CursorEditor.Position.Row*int32(cellHeight)) - z.Scroll.Y + float32(rowsInitialPadding) + float32(textPadding)
-			var cellX float32 = z.Bounds.X + float32(counterColumnWidth) + float32(textPadding) + float32(CursorEditor.Position.Col)*appAssets.MainFontCharacterWidth
+			cellX += float32(CursorEditor.Position.Col) * appAssets.MainFontCharacterWidth
 			rl.DrawRectangle(
 				int32(cellX),
 				int32(cellY),
@@ -71,8 +71,7 @@ func (z *Zone) DrawEditor(appAssets *assets.Assets, eg *EditorGrid, shouldDrawCu
 				colors.Background(),
 			)
 		} else {
-			var cellY float32 = z.Bounds.Y + float32(CursorEditor.Position.Row*int32(cellHeight)) - z.Scroll.Y + float32(rowsInitialPadding) + float32(textPadding)
-			var cellX float32 = z.Bounds.X + float32(counterColumnWidth) + float32(textPadding)
+			// Empty row
 			rl.DrawRectangle(
 				int32(cellX),
 				int32(cellY),
@@ -85,9 +84,36 @@ func (z *Zone) DrawEditor(appAssets *assets.Assets, eg *EditorGrid, shouldDrawCu
 
 	rl.EndScissorMode()
 
-	contentHeight += cellHeight*int(eg.Rows) + int(rowsInitialPadding)
-
 	z.ContentSize.Y = max(float32(contentHeight), z.Bounds.Height)
 	z.ContentSize.X = max(eg.MaxWidth, z.Bounds.Width)
 	z.drawScrollbars()
+}
+
+func updateEditorScrollBasedOnCursor(z *Zone, cursor *Cursor, cellHeight int, linesPadding int8) (scrollRow int32, lastRowToRender int32) {
+	z.Scroll.X = 0
+	// @TODO: Horizontal scrolling with leeway
+
+	var rowsToRender int8 = z.GetNumberOfVisibleRows(int32(cellHeight)) + 1
+	scrollRow = int32(z.Scroll.Y) / int32(cellHeight)
+	if rowsToRender > linesPadding*2 {
+		if cursor.Position.Row < scrollRow+int32(linesPadding) {
+			scrollRow = max(cursor.Position.Row-int32(linesPadding), 0)
+		}
+
+		if cursor.Position.Row >= scrollRow+int32(rowsToRender-linesPadding) {
+			scrollRow = cursor.Position.Row - int32(rowsToRender-linesPadding-1)
+			if cursor.Position.Row >= cursor.Position.MaxRow-int32(linesPadding) {
+				scrollRow -= int32(linesPadding) - (cursor.Position.MaxRow - cursor.Position.Row)
+			}
+		}
+
+		z.Scroll.Y = float32(cellHeight * int(scrollRow))
+	} else {
+		z.Scroll.Y = float32(cellHeight * int(cursor.Position.Row))
+	}
+	scrollRow = min(max(scrollRow, 0), cursor.Position.MaxRow)
+	z.ClampScrollsToZoneSize()
+	lastRowToRender = min(cursor.Position.MaxRow, scrollRow+int32(rowsToRender))
+
+	return scrollRow, lastRowToRender
 }

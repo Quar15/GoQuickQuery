@@ -18,13 +18,28 @@ func (z *Zone) DrawCommandZone(appAssets *assets.Assets, c *Cursor, currConnName
 	rl.DrawRectangle(int32(z.Bounds.X), int32(z.Bounds.Y), int32(modeStatusTextWidth+textSpacing*4), int32(z.Bounds.Height/2), statusLineColor)
 	// @TODO: Add horizontal spacing
 	appAssets.DrawTextMainFont(modeStatusText, rl.Vector2{X: z.Bounds.X + textSpacing*2, Y: z.Bounds.Y + textSpacing/2}, colors.Mantle())
-	var detailsStatusText string = fmt.Sprintf("%d/%d | %d/%d | %d%%", c.Position.Col+1, c.Position.MaxCol+1, c.Position.Row+1, c.Position.MaxRow+1, 0)
+	var cursorPercentage int8 = 0
+	switch c.Type {
+	case CursorTypeSpreadsheet:
+		if c.Position.MaxRow > 0 {
+			cursorPercentage = int8(100 * ((c.Position.Row-1)*c.Position.MaxCol + c.Position.Col) / (c.Position.MaxRow * c.Position.MaxCol))
+		}
+	case CursorTypeEditor:
+		// @TODO: Get info about cursor status via editor grid
+		cursorPercentage = 0
+	}
+	var detailsStatusText string = fmt.Sprintf(
+		"%d/%d | %d/%d | %d%%",
+		c.Position.Col+1, c.Position.MaxCol+1,
+		c.Position.Row+1, c.Position.MaxRow+1,
+		cursorPercentage,
+	)
 	var detailsStatusTextWidth float32 = appAssets.MeasureTextMainFont(detailsStatusText).X
 	var detailsStatusWidth float32 = detailsStatusTextWidth + textSpacing*4
 	rl.DrawRectangle(int32(z.Bounds.Width-detailsStatusWidth), int32(z.Bounds.Y), int32(detailsStatusWidth), int32(z.Bounds.Height/2), statusLineColor)
 	appAssets.DrawTextMainFont(detailsStatusText, rl.Vector2{X: z.Bounds.Width - z.Bounds.X - detailsStatusWidth + textSpacing*2, Y: z.Bounds.Y + textSpacing/2}, colors.Mantle())
 
-	var connectionStatusText = currConnName
+	var connectionStatusText string = currConnName
 	var connectionStatusTextWidth float32 = appAssets.MeasureTextMainFont(connectionStatusText).X
 	var connectionStatusTextX float32 = z.Bounds.Width - z.Bounds.X - detailsStatusWidth - connectionStatusTextWidth - textSpacing*2
 	appAssets.DrawTextMainFont(

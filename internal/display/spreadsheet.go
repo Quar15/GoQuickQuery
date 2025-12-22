@@ -35,14 +35,14 @@ func (z *Zone) DrawSpreadsheetZone(appAssets *assets.Assets, dg *database.DataGr
 	}
 
 	for row := scrollRow; row < lastRowToRender; row++ {
-		renderCounterColumnRow(z, appAssets, counterColumnWidth, counterColumnCharactersCount, cellHeight, textPadding, mouse, row)
+		renderSpreadsheetCounterColumnRow(z, appAssets, counterColumnWidth, counterColumnCharactersCount, cellHeight, textPadding, mouse, row)
 	}
 
 	rl.EndScissorMode()
 
 	// Draw static header
 	rl.DrawRectangle(int32(z.Bounds.X), int32(z.Bounds.Y), int32(z.Bounds.Width), int32(cellHeight), colors.Surface0()) // Left upper corner fill
-	renderHeadersRow(z, appAssets, dg, counterColumnWidth, cellHeight, textPadding, mouse)
+	renderSpreadsheetHeadersRow(z, appAssets, dg, counterColumnWidth, cellHeight, textPadding, mouse)
 
 	z.ContentSize.Y = max(float32(contentHeight), z.Bounds.Height)
 	z.ContentSize.X = max(float32(contentWidth), z.Bounds.Width)
@@ -100,7 +100,7 @@ func renderContentRow(z *Zone, appAssets *assets.Assets, dg *database.DataGrid, 
 	}
 }
 
-func renderCounterColumnRow(z *Zone, appAssets *assets.Assets, counterColumnWidth int, counterColumnCharactersCount int, cellHeight int, textPadding int32, mouse rl.Vector2, row int32) {
+func renderSpreadsheetCounterColumnRow(z *Zone, appAssets *assets.Assets, counterColumnWidth int, counterColumnCharactersCount int, cellHeight int, textPadding int32, mouse rl.Vector2, row int32) {
 	var cellX int32 = int32(z.Bounds.X)
 	var cellY int32 = int32(z.Bounds.Y) + (row+1)*int32(cellHeight) - int32(z.Scroll.Y)
 
@@ -114,7 +114,7 @@ func renderCounterColumnRow(z *Zone, appAssets *assets.Assets, counterColumnWidt
 	appAssets.DrawTextMainFont(strconv.Itoa(int(row+1)), rl.Vector2{X: float32(cellX) + counterColumnLeftPadding, Y: float32(cellY + textPadding)}, colors.Overlay0())
 }
 
-func renderHeadersRow(z *Zone, appAssets *assets.Assets, dg *database.DataGrid, counterColumnWidth int, cellHeight int, textPadding int32, mouse rl.Vector2) {
+func renderSpreadsheetHeadersRow(z *Zone, appAssets *assets.Assets, dg *database.DataGrid, counterColumnWidth int, cellHeight int, textPadding int32, mouse rl.Vector2) {
 	for col := int32(0); col < dg.Cols; col++ {
 		var cellX int32 = int32(z.Bounds.X-z.Scroll.X) + int32(counterColumnWidth)
 		for c := int32(0); c < col; c++ {
@@ -148,7 +148,7 @@ func updateSpreadsheetScrollBasedOnCursor(z *Zone, dg *database.DataGrid, cursor
 		if cursor.Position.Row >= scrollRow+int32(rowsToRender)-int32(linesPadding) {
 			scrollRow = cursor.Position.Row - int32(rowsToRender-linesPadding-1)
 			if cursor.Position.Row >= cursor.Position.MaxRow-int32(linesPadding) {
-				scrollRow -= int32(linesPadding) - (cursor.Position.MaxRow - cursor.Position.Row)
+				scrollRow -= int32(linesPadding) - (cursor.Position.MaxRow - cursor.Position.Row + 1)
 			}
 		}
 

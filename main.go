@@ -180,11 +180,6 @@ func main() {
 		bottomZone.Bounds = rl.Rectangle{X: 0, Y: splitter.Y + splitter.Height/2, Width: float32(screenWidth), Height: float32(screenHeight) - (splitter.Y + splitter.Height/2) - commandZoneHeight}
 		commandZone.Bounds = rl.Rectangle{X: 0, Y: bottomZone.Bounds.Y + bottomZone.Bounds.Height, Width: float32(screenWidth), Height: commandZoneHeight}
 
-		// @TODO: Fix to get content into consideration
-		if int(topZone.ContentSize.X) < screenWidth {
-			topZone.ContentSize = rl.Vector2{X: float32(screenWidth), Y: 1200}
-		}
-
 		topZone.UpdateZoneScroll()
 		bottomZone.UpdateZoneScroll()
 
@@ -197,7 +192,7 @@ func main() {
 		rl.ClearBackground(colors.Background())
 
 		editorIsFocused := (display.CurrCursor.Type == display.CursorTypeEditor)
-		topZone.DrawEditor(&appAssets, &eg, editorIsFocused)
+		topZone.DrawEditor(&appAssets, &eg, display.CursorEditor, editorIsFocused)
 		bottomZone.DrawSpreadsheetZone(&appAssets, &dg, display.CursorSpreadsheet)
 		commandZone.DrawCommandZone(&appAssets, display.CurrCursor, connMgr.GetCurrentConnectionName())
 

@@ -235,10 +235,6 @@ func (EditorCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *databa
 			switch {
 			case slices.Contains(HANDLED_MOTION_KEY_CODES, int(keyPressed)):
 				cursor.AppendMotion(rune(keyPressed))
-			case rl.IsKeyPressed(rl.KeyHome):
-				cursor.Position.Col = 0
-			case rl.IsKeyPressed(rl.KeyEnd):
-				cursor.Position.Col = dg.Cols - 1
 			}
 		} else if rl.IsKeyDown(rl.KeyLeftControl) {
 			switch {
@@ -253,19 +249,27 @@ func (EditorCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *databa
 					cursor.Common.Logs.Channel <- "Failed to execute query (Something went wrong)"
 				}
 			case rl.IsKeyPressed(rl.KeyC):
-				if cursor.Position.Col >= 0 && dg.Cols > 0 {
-					// @TODO: Add type specific formatting
+				if cursor.Position.Col >= 0 && eg.Rows > 0 {
 					var dataString string = ""
-					if cursor.Common.Mode == ModeVisual || cursor.Common.Mode == ModeVLine {
+					switch cursor.Common.Mode {
+					case ModeVisual:
 						for row := cursor.Position.SelectStartRow; row <= cursor.Position.SelectEndRow; row++ {
-							for col := cursor.Position.SelectStartCol; col < cursor.Position.SelectEndCol; col++ {
-								dataString += format.GetValueAsString(dg.Data[row][dg.Headers[col]]) + ","
+							if eg.Cols[row] > 0 {
+								endCol := min(cursor.Position.SelectEndCol, eg.Cols[row])
+								for col := cursor.Position.SelectStartCol; col <= endCol; col++ {
+									dataString += string(eg.Text[row][col])
+								}
 							}
-							dataString += format.GetValueAsString(dg.Data[row][dg.Headers[cursor.Position.SelectEndCol]]) + "\n"
+							dataString += "\n"
 						}
-					} else {
-						dataString = format.GetValueAsString(dg.Data[cursor.Position.Row][dg.Headers[cursor.Position.Col]])
+					case ModeVLine:
+						for row := cursor.Position.SelectStartRow; row <= cursor.Position.SelectEndRow; row++ {
+							dataString += eg.Text[row] + "\n"
+						}
+					default:
+						dataString = eg.Text[cursor.Position.Row]
 					}
+					slog.Debug("Copied to clipboard from editor", slog.String("dataString", dataString))
 					clipboard.Write(clipboard.FmtText, []byte(dataString))
 				}
 			case rl.IsKeyPressed(rl.KeyE):
@@ -289,9 +293,9 @@ func (EditorCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *databa
 				cursor.Common.MotionBuf = "/"
 				cursor.UpdateCmdLine()
 			case rl.IsKeyPressed(rl.KeyHome):
-				cursor.Position.Row = 0
+				cursor.Position.Col = 0
 			case rl.IsKeyPressed(rl.KeyEnd):
-				cursor.Position.Row = dg.Rows - 1
+				cursor.Position.Col = eg.Cols[cursor.Position.Row]
 			case rl.IsKeyPressed(rl.KeyPageUp):
 				cursor.Position.Row -= int32(pageRows)
 			case rl.IsKeyPressed(rl.KeyPageDown):

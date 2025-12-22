@@ -47,12 +47,12 @@ func renderEditorTextRow(z *Zone, appAssets *assets.Assets, eg *EditorGrid, curs
 	if eg.Highlight[row] != nil {
 		for col := range eg.Text[row] {
 			var cellX float32 = z.Bounds.X + float32(counterColumnWidth) + float32(textPadding) + float32(col*int(appAssets.MainFontCharacterWidth))
-			if cursor.IsSelected(int32(col), row) {
+			if cursor.IsActive() && cursor.IsSelected(int32(col), row) {
 				rl.DrawRectangleRec(
 					rl.Rectangle{
-						X: cellX,
-						Y: cellY,
-						Width: appAssets.MainFontCharacterWidth,
+						X:      cellX,
+						Y:      cellY,
+						Width:  appAssets.MainFontCharacterWidth,
 						Height: appAssets.MainFontSize,
 					},
 					colors.Surface1(),

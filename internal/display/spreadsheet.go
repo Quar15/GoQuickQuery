@@ -65,7 +65,7 @@ func renderContentRow(z *Zone, appAssets *assets.Assets, dg *database.DataGrid, 
 			cellBackgroundColor = colors.Mantle()
 			cellBorderColor = colors.Blue()
 		}
-		if cursor.IsSelected(int32(col), row) {
+		if cursor.IsActive() && cursor.IsSelected(int32(col), row) {
 			cellBackgroundColor = colors.Surface1()
 		}
 		var cellRect rl.RectangleInt32 = rl.RectangleInt32{X: cellX, Y: cellY, Width: dg.ColumnsWidth[col], Height: int32(cellHeight)}

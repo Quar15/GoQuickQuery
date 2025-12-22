@@ -154,6 +154,7 @@ func main() {
 	display.CursorConnection.Handler.Init(display.CursorConnection, &connectionsZone)
 	display.CursorConnection.Position.MaxRow = int32(connMgr.GetNumberOfConnections()) - 1
 	display.CurrCursor = display.CursorEditor
+	display.CurrCursor.SetActive(true)
 
 	topZone.ContentSize = rl.Vector2{X: 1600, Y: 1200}
 	bottomZone.ContentSize = rl.Vector2{X: 2000, Y: 2000}

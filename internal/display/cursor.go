@@ -17,6 +17,7 @@ const (
 	ModeInsert
 	ModeVisual
 	ModeVLine
+	ModeVBlock
 	ModeCommand
 )
 
@@ -25,6 +26,7 @@ var modeName = map[CursorMode]string{
 	ModeInsert:  "INSERT",
 	ModeVisual:  "VISUAL",
 	ModeVLine:   "V-LINE",
+	ModeVBlock:  "V-BLOCK",
 	ModeCommand: "COMMAND",
 }
 
@@ -37,6 +39,7 @@ var modeColor = map[CursorMode]rl.Color{
 	ModeInsert:  colors.Green(),
 	ModeVisual:  colors.Mauve(),
 	ModeVLine:   colors.Mauve(),
+	ModeVBlock:  colors.Mauve(),
 	ModeCommand: colors.Peach(),
 }
 
@@ -97,6 +100,7 @@ type Cursor struct {
 	Handler  CursorHandler
 	Type     CursorType
 	Zone     *Zone
+	isActive bool
 }
 
 var cursorCommon *CursorCommon = &CursorCommon{}
@@ -105,18 +109,21 @@ var CursorSpreadsheet *Cursor = &Cursor{
 	Position: CursorPosition{},
 	Handler:  SpreadsheetCursorStateHandler{},
 	Type:     CursorTypeSpreadsheet,
+	isActive: false,
 }
 var CursorConnection *Cursor = &Cursor{
 	Common:   cursorCommon,
 	Position: CursorPosition{},
 	Handler:  ConnectionsCursorStateHandler{},
 	Type:     CursorTypeConnections,
+	isActive: false,
 }
 var CursorEditor *Cursor = &Cursor{
 	Common:   cursorCommon,
 	Position: CursorPosition{},
 	Handler:  EditorCursorStateHandler{},
 	Type:     CursorTypeEditor,
+	isActive: false,
 }
 var CurrCursor *Cursor
 
@@ -142,6 +149,15 @@ func (c *Cursor) TransitionMode(newMode CursorMode) {
 	c.Common.Mode = newMode
 }
 
+func (c *Cursor) IsActive() bool {
+	return c.isActive
+}
+
+func (c *Cursor) SetActive(newState bool) {
+	c.isActive = newState
+	c.TransitionMode(ModeNormal)
+}
+
 func (c *Cursor) SetSelect(startCol int32, startRow int32, endCol int32, endRow int32) {
 	c.Position.SelectStartCol = startCol
 	c.Position.SelectStartRow = startRow
@@ -156,6 +172,8 @@ func (c *Cursor) SetSelect(startCol int32, startRow int32, endCol int32, endRow 
 
 func (c *Cursor) UpdateSelectBasedOnPosition() {
 	switch c.Common.Mode {
+	case ModeVBlock:
+		fallthrough
 	case ModeVisual:
 		if c.Position.Col < c.Position.SelectAnchorCol {
 			c.Position.SelectStartCol = c.Position.Col
@@ -210,11 +228,48 @@ func (c *Cursor) ClampFocus(limitCol int32, limitRow int32) {
 }
 
 func (c *Cursor) IsSelected(col int32, row int32) bool {
-	if c.Common.Mode != ModeVisual && c.Common.Mode != ModeVLine {
-		return false
+	switch c.Common.Mode {
+	case ModeVisual:
+		startRow, startCol := c.Position.SelectAnchorRow, c.Position.SelectAnchorCol
+		endRow, endCol := c.Position.Row, c.Position.Col
+
+		// Swap if selection is "backwards"
+		if startRow > endRow || (startRow == endRow && startCol > endCol) {
+			startRow, endRow = endRow, startRow
+			startCol, endCol = endCol, startCol
+		}
+
+		// Single-line selection
+		if startRow == endRow {
+			return row == startRow && col >= startCol && col <= endCol
+		}
+
+		// Multi-line selection
+		switch {
+		case row > startRow && row < endRow:
+			// Entire middle rows are selected
+			return true
+		case row == startRow:
+			// Only from startCol to end of this row
+			return col >= startCol
+		case row == endRow:
+			// Only from beginning of this row to endCol
+			return col <= endCol
+		default:
+			return false
+		}
+	case ModeVLine:
+		if row >= c.Position.SelectStartRow && row <= c.Position.SelectEndRow {
+			return true
+		}
+	case ModeVBlock:
+		return col >= c.Position.SelectStartCol &&
+			col <= c.Position.SelectEndCol &&
+			row >= c.Position.SelectStartRow &&
+			row <= c.Position.SelectEndRow
 	}
 
-	return col >= c.Position.SelectStartCol && col <= c.Position.SelectEndCol && row >= c.Position.SelectStartRow && row <= c.Position.SelectEndRow
+	return false
 }
 
 var HANDLED_MOTION_KEY_CODES []int = []int{
@@ -260,16 +315,25 @@ func (c *Cursor) CheckForMotion() {
 		c.SetSelect(0, c.Position.Row, c.Position.MaxCol, c.Position.Row)
 		c.TransitionMode(ModeVLine)
 		motionExecuted = true
+	case "^V":
+		c.SetSelect(c.Position.Col, c.Position.Row, c.Position.Col, c.Position.Row)
+		c.TransitionMode(ModeVBlock)
+		motionExecuted = true
 	case "v":
 		c.SetSelect(c.Position.Col, c.Position.Row, c.Position.Col, c.Position.Row)
 		motionExecuted = true
 	case "^Ww":
 		// @TODO: Consider swapping from connection cursor
+		// @TODO: Cleanup cursor and add transition functions
 		switch c.Type {
 		case CursorTypeEditor:
+			CurrCursor.SetActive(false)
 			CurrCursor = CursorSpreadsheet
+			CurrCursor.SetActive(true)
 		case CursorTypeSpreadsheet:
+			CurrCursor.SetActive(false)
 			CurrCursor = CursorEditor
+			CurrCursor.SetActive(true)
 		}
 		motionExecuted = true
 	default:

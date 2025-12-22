@@ -41,6 +41,8 @@ func (SpreadsheetCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *d
 	switch cursor.Common.Mode {
 	case ModeVLine:
 		fallthrough
+	case ModeVBlock:
+		fallthrough
 	case ModeVisual:
 		fallthrough
 	case ModeNormal:
@@ -59,21 +61,37 @@ func (SpreadsheetCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *d
 				if cursor.Position.Col >= 0 && dg.Cols > 0 {
 					// @TODO: Add type specific formatting
 					var dataString string = ""
-					if cursor.Common.Mode == ModeVisual || cursor.Common.Mode == ModeVLine {
+					switch cursor.Common.Mode {
+					case ModeVisual:
+						for row := cursor.Position.SelectStartRow; row <= cursor.Position.SelectEndRow; row++ {
+							for col := int32(0); col < dg.Cols; col++ {
+								if cursor.IsSelected(col, row) {
+									dataString += format.GetValueAsString(dg.Data[row][dg.Headers[col]]) + ","
+								}
+							}
+							dataString += "\n"
+						}
+					case ModeVLine:
+						fallthrough
+					case ModeVBlock:
 						for row := cursor.Position.SelectStartRow; row <= cursor.Position.SelectEndRow; row++ {
 							for col := cursor.Position.SelectStartCol; col < cursor.Position.SelectEndCol; col++ {
 								dataString += format.GetValueAsString(dg.Data[row][dg.Headers[col]]) + ","
 							}
 							dataString += format.GetValueAsString(dg.Data[row][dg.Headers[cursor.Position.SelectEndCol]]) + "\n"
 						}
-					} else {
+					case ModeNormal:
 						dataString = format.GetValueAsString(dg.Data[cursor.Position.Row][dg.Headers[cursor.Position.Col]])
 					}
+					slog.Debug("Copied to clipboard from spreadsheet", slog.String("dataString", dataString))
 					clipboard.Write(clipboard.FmtText, []byte(dataString))
 				}
 			case rl.IsKeyPressed(rl.KeyE):
-				CursorSpreadsheet.TransitionMode(ModeNormal)
+				CursorSpreadsheet.SetActive(false)
+				CursorConnection.SetActive(true)
 				CurrCursor = CursorConnection
+			case rl.IsKeyPressed(rl.KeyV):
+				cursor.AppendMotionString("^V")
 			case rl.IsKeyPressed(rl.KeyW):
 				cursor.AppendMotionString("^W")
 			}
@@ -147,8 +165,9 @@ func (ConnectionsCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *d
 		} else if rl.IsKeyDown(rl.KeyLeftControl) {
 			switch {
 			case rl.IsKeyPressed(rl.KeyE):
-				CursorConnection.TransitionMode(ModeNormal)
-				CurrCursor = CursorSpreadsheet
+				CursorConnection.SetActive(false)
+				CursorEditor.SetActive(true)
+				CurrCursor = CursorEditor
 			case rl.IsKeyPressed(rl.KeyD):
 				slog.Debug("Connections debug", slog.Any("Position", CursorConnection.Position))
 			}
@@ -159,10 +178,15 @@ func (ConnectionsCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *d
 				if err != nil {
 					slog.Error("Failed to set current connection by name", slog.Any("error", err))
 				}
-				CursorConnection.TransitionMode(ModeNormal)
-				CurrCursor = CursorSpreadsheet
+				// @TODO: Go back to last focused cursor
+				CursorConnection.SetActive(false)
+				CursorEditor.SetActive(true)
+				CurrCursor = CursorEditor
 			case rl.IsKeyPressed(rl.KeyEscape) || rl.IsKeyPressed(rl.KeyCapsLock): // @TODO: Remove personal preference CapsLock
-				CursorConnection.TransitionMode(ModeNormal)
+				// @TODO: Go back to last focused cursor
+				CursorConnection.SetActive(false)
+				CursorEditor.SetActive(true)
+				CurrCursor = CursorEditor
 				CurrCursor = CursorSpreadsheet
 			case slices.Contains(HANDLED_MOTION_KEY_CODES, int(keyPressed)):
 				cursor.AppendMotion(rune(keyPressed)) // @TODO: Disable visual mode for connection selection
@@ -228,6 +252,8 @@ func (EditorCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *databa
 	switch cursor.Common.Mode {
 	case ModeVLine:
 		fallthrough
+	case ModeVBlock:
+		fallthrough
 	case ModeVisual:
 		fallthrough
 	case ModeNormal:
@@ -255,9 +281,10 @@ func (EditorCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *databa
 					case ModeVisual:
 						for row := cursor.Position.SelectStartRow; row <= cursor.Position.SelectEndRow; row++ {
 							if eg.Cols[row] > 0 {
-								endCol := min(cursor.Position.SelectEndCol, eg.Cols[row])
-								for col := cursor.Position.SelectStartCol; col <= endCol; col++ {
-									dataString += string(eg.Text[row][col])
+								for col := int32(0); col < eg.Cols[row]; col++ {
+									if cursor.IsSelected(col, row) {
+										dataString += string(eg.Text[row][col])
+									}
 								}
 							}
 							dataString += "\n"
@@ -266,6 +293,16 @@ func (EditorCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *databa
 						for row := cursor.Position.SelectStartRow; row <= cursor.Position.SelectEndRow; row++ {
 							dataString += eg.Text[row] + "\n"
 						}
+					case ModeVBlock:
+						for row := cursor.Position.SelectStartRow; row <= cursor.Position.SelectEndRow; row++ {
+							if eg.Cols[row] > 0 {
+								endCol := min(cursor.Position.SelectEndCol, eg.Cols[row])
+								for col := cursor.Position.SelectStartCol; col <= endCol; col++ {
+									dataString += string(eg.Text[row][col])
+								}
+							}
+							dataString += "\n"
+						}
 					default:
 						dataString = eg.Text[cursor.Position.Row]
 					}
@@ -273,10 +310,13 @@ func (EditorCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *databa
 					clipboard.Write(clipboard.FmtText, []byte(dataString))
 				}
 			case rl.IsKeyPressed(rl.KeyE):
-				CursorSpreadsheet.TransitionMode(ModeNormal)
+				CursorEditor.SetActive(false)
+				CursorConnection.SetActive(true)
 				CurrCursor = CursorConnection
 			case rl.IsKeyPressed(rl.KeyD):
 				slog.Debug("Editor debug", slog.Any("Position", CursorConnection.Position), slog.Any("eg", eg))
+			case rl.IsKeyPressed(rl.KeyV):
+				cursor.AppendMotionString("^V")
 			case rl.IsKeyPressed(rl.KeyW):
 				cursor.AppendMotionString("^W")
 			}

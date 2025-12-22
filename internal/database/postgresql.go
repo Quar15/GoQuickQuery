@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -78,6 +77,7 @@ func (p *PostgresConn) Query(ctx context.Context, query string) (chan queryResul
 		return nil, fmt.Errorf("Broken connection")
 	}
 	// @TODO: Sanitize query to always limit number of results
+	slog.Debug("Trying to execute query via postgres", slog.String("query", query))
 	return queryRows(ctx, p.Conn, query), nil
 }
 
@@ -93,7 +93,7 @@ func connectToPostgres(connString string) (*pgx.Conn, error) {
 	slog.Debug("Trying to connect with postgres", slog.String("connString", connString))
 	conn, err := pgx.Connect(context.Background(), connString)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		slog.Error("Unable to connect to database", slog.Any("error", err))
 		return nil, err
 	}
 

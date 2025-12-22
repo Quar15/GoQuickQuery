@@ -99,7 +99,7 @@ func handleQuery(appAssets *assets.Assets, cursor *display.Cursor, dg *database.
 				cursor.Handler.Reset(cursor)
 				display.CursorSpreadsheet.Position.MaxCol = dg.Cols
 				display.CursorSpreadsheet.Position.MaxRow = dg.Rows
-				cursor.Common.Logs.Channel <- fmt.Sprintf("'%s' finished", connData.QueryText)
+				cursor.Common.Logs.Channel <- fmt.Sprintf("'%s' finished after %s and returned %d result(s)", connData.QueryText, connData.GetQueryRuntimeDynamicString(), dg.Rows)
 				// @TODO: Add system notification for query finish
 			}
 		} else {
@@ -120,7 +120,6 @@ func main() {
 		panic("Failed to initialize")
 	}
 	connMgr := database.NewConnectionManager(cfg.Connections, &database.DefaultConnectionFactory{})
-	connMgr.ExecuteQuery(context.Background(), "postgres", "SELECT 1")
 	defer connMgr.Close(context.Background())
 
 	// --- Init Window ---

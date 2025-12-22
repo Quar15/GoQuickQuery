@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 )
@@ -80,6 +81,7 @@ func (mgr *ConnectionManager) IsConnectionAlive(name string) bool {
 }
 
 func (mgr *ConnectionManager) ExecuteQuery(ctx context.Context, connectionKey string, query string) error {
+	slog.Debug("Trying to execute query", slog.String("query", query), slog.String("connectionKey", connectionKey))
 	// Find conn in map
 	mgr.mu.Lock()
 	connData, ok := mgr.connections[connectionKey]
@@ -88,9 +90,10 @@ func (mgr *ConnectionManager) ExecuteQuery(ctx context.Context, connectionKey st
 		return fmt.Errorf("No connection '%s' found", connectionKey)
 	}
 
-	if connData.QueryChannel != nil && connData.ConnCtxCancel != nil {
+	if connData.Conn != nil && connData.QueryChannel != nil && connData.ConnCtxCancel != nil {
 		connData.ConnCtxCancel()
-		return nil
+		connData.ClearConn()
+		return fmt.Errorf("Cancelled query")
 	}
 
 	if connData.Conn == nil || !connData.Conn.IsAlive() {
@@ -117,8 +120,12 @@ func (mgr *ConnectionManager) ExecuteQuery(ctx context.Context, connectionKey st
 		connData.ClearConn()
 		return err
 	}
+	mgr.mu.Lock()
+	connData.ConnCtx = &ctx
 	connData.QueryChannel = ch
 	connData.QueryStartTimestamp = time.Time.UnixMilli(time.Now())
+	mgr.mu.Unlock()
+	slog.Debug("Query started", slog.String("query", query))
 
 	return nil
 }

@@ -265,15 +265,14 @@ func (EditorCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *databa
 		} else if rl.IsKeyDown(rl.KeyLeftControl) {
 			switch {
 			case rl.IsKeyPressed(rl.KeyEnter):
-				// @TODO: Get query from editor (temp hard code)
-				query := "SELECT 1;"
-				//query := "SELECT pg_sleep(20)"
-				//query := "SELECT * FROM example LIMIT 500;"
-				err := connManager.ExecuteQuery(context.Background(), connManager.GetCurrentConnectionName(), query)
-				if err != nil {
-					slog.Error("Failed to execute query", slog.Any("error", err))
-					cursor.Common.Logs.Channel <- "Failed to execute query (Something went wrong)"
-				}
+				detectAndExecuteQuery(cursor, eg, connManager)
+				// @TODO: Remove hard coded query and detect query in editor
+				// query := "SELECT 1"
+				// err := connManager.ExecuteQuery(context.Background(), connManager.GetCurrentConnectionName(), query)
+				//if err != nil {
+				//	slog.Error("Failed to execute query", slog.Any("error", err))
+				//	cursor.Common.Logs.Channel <- "Failed to execute query (Something went wrong)"
+				//}
 			case rl.IsKeyPressed(rl.KeyC):
 				if cursor.Position.Col >= 0 && eg.Rows > 0 {
 					var dataString string = ""
@@ -377,4 +376,40 @@ func (EditorCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *databa
 	}
 	cursor.ClampFocus(eg.Cols[cursor.Position.Row]-1, eg.Rows)
 	cursor.UpdateSelectBasedOnPosition()
+}
+
+func detectAndExecuteQuery(cursor *Cursor, eg *EditorGrid, connManager *database.ConnectionManager) {
+	query := ""
+	// @TODO: Implement other modes behavior
+	switch cursor.Common.Mode {
+	case ModeVisual:
+		for row := cursor.Position.SelectStartRow; row <= cursor.Position.SelectEndRow; row++ {
+			if eg.Cols[row] > 0 {
+				for col := int32(0); col < eg.Cols[row]; col++ {
+					if cursor.IsSelected(col, row) {
+						query += string(eg.Text[row][col])
+					}
+				}
+			}
+		}
+	case ModeVLine:
+		for row := cursor.Position.SelectStartRow; row <= cursor.Position.SelectEndRow; row++ {
+			if eg.Cols[row] > 0 {
+				for col := int32(0); col < eg.Cols[row]; col++ {
+					query += string(eg.Text[row][col])
+				}
+			}
+		}
+	}
+	if query == "" {
+		slog.Error("Failed to execute query", slog.String("error", "No query provided"))
+		cursor.Common.Logs.Channel <- "Failed to execute query (No query provided)"
+		return
+	}
+
+	err := connManager.ExecuteQuery(context.Background(), connManager.GetCurrentConnectionName(), query)
+	if err != nil {
+		slog.Error("Failed to execute query", slog.Any("error", err))
+		cursor.Common.Logs.Channel <- "Failed to execute query (Something went wrong)"
+	}
 }

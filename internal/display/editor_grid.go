@@ -143,7 +143,7 @@ func (eg *EditorGrid) FakeInit(appAssets *assets.Assets) {
 		"SELECT * FROM example LIMIT 500;",
 		"",
 		"UPDATE example SET x = 1 WHERE id = 2;",
-		"SELECT * FROM \"public.example\" WHERE a = 'xyz';",
+		"SELECT * FROM \"public\".\"example\" WHERE name = 'xyz';",
 	}
 	eg.Rows = int32(len(eg.Text))
 	eg.Highlight = make([][]HighlightColorEnum, eg.Rows)

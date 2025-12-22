@@ -61,7 +61,7 @@ func renderContentRow(z *Zone, appAssets *assets.Assets, dg *database.DataGrid, 
 
 		var cellBackgroundColor rl.Color = colors.Background()
 		var cellBorderColor rl.Color = colors.Mantle()
-		if cursor.IsFocused(int32(col), row) {
+		if cursor.IsActive() && cursor.IsFocused(int32(col), row) {
 			cellBackgroundColor = colors.Mantle()
 			cellBorderColor = colors.Blue()
 		}

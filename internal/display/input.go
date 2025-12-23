@@ -2,8 +2,10 @@ package display
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
@@ -367,19 +369,29 @@ func (EditorCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *databa
 		}
 	}
 
-	cursor.Zone.ClampScrollsToZoneSize()
-	// Additional focus check to be in scope of Cols
-	if cursor.Position.Row >= eg.Rows {
-		cursor.Position.Row = eg.Rows - 1
-	} else if cursor.Position.Row < 0 {
+	if eg.Rows <= 0 {
 		cursor.Position.Row = 0
+		cursor.Position.Col = 0
+	} else {
+		cursor.Zone.ClampScrollsToZoneSize()
+		// Additional focus check to be in scope of Cols
+		if cursor.Position.Row >= eg.Rows {
+			cursor.Position.Row = eg.Rows - 1
+		} else if cursor.Position.Row < 0 {
+			cursor.Position.Row = 0
+		}
+		cursor.ClampFocus(eg.Cols[cursor.Position.Row]-1, eg.Rows)
+		cursor.UpdateSelectBasedOnPosition()
 	}
-	cursor.ClampFocus(eg.Cols[cursor.Position.Row]-1, eg.Rows)
-	cursor.UpdateSelectBasedOnPosition()
 }
 
 func detectAndExecuteQuery(cursor *Cursor, eg *EditorGrid, connManager *database.ConnectionManager) {
 	query := ""
+	if eg.Rows <= 0 {
+		slog.Error("Failed to execute query", slog.String("error", "No query provided"))
+		cursor.Common.Logs.Channel <- "Failed to execute query (No query provided)"
+		return
+	}
 	// @TODO: Implement other modes behavior
 	switch cursor.Common.Mode {
 	case ModeVisual:
@@ -400,6 +412,19 @@ func detectAndExecuteQuery(cursor *Cursor, eg *EditorGrid, connManager *database
 				}
 			}
 		}
+	case ModeInsert:
+		fallthrough
+	case ModeNormal:
+		start, end := eg.DetectQueryRowsBoundaryBasedOnRow(cursor.Position.Row)
+		var sb strings.Builder
+		for i := start; i <= end; i++ {
+			sb.WriteString(eg.Text[i])
+			if i < end {
+				sb.WriteString(" ")
+			}
+		}
+
+		query = strings.TrimSpace(sb.String())
 	}
 	if query == "" {
 		slog.Error("Failed to execute query", slog.String("error", "No query provided"))
@@ -410,6 +435,6 @@ func detectAndExecuteQuery(cursor *Cursor, eg *EditorGrid, connManager *database
 	err := connManager.ExecuteQuery(context.Background(), connManager.GetCurrentConnectionName(), query)
 	if err != nil {
 		slog.Error("Failed to execute query", slog.Any("error", err))
-		cursor.Common.Logs.Channel <- "Failed to execute query (Something went wrong)"
+		cursor.Common.Logs.Channel <- fmt.Sprintf("Failed to execute query (%s)", err)
 	}
 }

@@ -10,6 +10,9 @@ import (
 )
 
 func (z *Zone) DrawEditor(appAssets *assets.Assets, eg *EditorGrid, cursor *Cursor, shouldDrawCursor bool) {
+	if eg.Rows <= 0 {
+		return
+	}
 	const cellHeight int = 28
 	const textPadding int32 = 6
 	const rowsInitialPadding int32 = 16
@@ -28,6 +31,7 @@ func (z *Zone) DrawEditor(appAssets *assets.Assets, eg *EditorGrid, cursor *Curs
 	for row := scrollRow; row < lastRowToRender; row++ {
 		renderEditorTextRow(z, appAssets, eg, cursor, counterColumnWidth, cellHeight, rowsInitialPadding, textPadding, row)
 	}
+	renderEditorDetectedQueryOutline(z, appAssets, eg, cursor, counterColumnWidth, cellHeight, rowsInitialPadding, textPadding)
 	for row := scrollRow; row < lastRowToRender; row++ {
 		renderEditorRowCounter(z, appAssets, counterColumnCharactersCount, cellHeight, rowsInitialPadding, textPadding, row)
 	}
@@ -68,6 +72,26 @@ func renderEditorTextRow(z *Zone, appAssets *assets.Assets, eg *EditorGrid, curs
 			)
 		}
 	}
+}
+
+func renderEditorDetectedQueryOutline(z *Zone, appAssets *assets.Assets, eg *EditorGrid, cursor *Cursor, counterColumnWidth int, cellHeight int, rowsInitialPadding int32, textPadding int32) {
+	start, end := eg.DetectQueryRowsBoundaryBasedOnRow(cursor.Position.Row)
+	outlineRect := rl.Rectangle{
+		X:      z.Bounds.X + float32(counterColumnWidth),
+		Y:      z.Bounds.Y + float32(start*int32(cellHeight)) - z.Scroll.Y + float32(rowsInitialPadding-textPadding),
+		Height: 0,
+		Width:  0,
+	}
+	outlineRect.Height = float32(cellHeight * int(end-start+1))
+	maxCols := eg.Cols[start]
+	for i := start; i <= end; i++ {
+		if maxCols < eg.Cols[i] {
+			maxCols = eg.Cols[i]
+		}
+	}
+	outlineRect.Width = float32(maxCols+1) * appAssets.MainFontCharacterWidth
+
+	rl.DrawRectangleLinesEx(outlineRect, 2, colors.Blue())
 }
 
 func renderEditorRowCounter(z *Zone, appAssets *assets.Assets, counterColumnCharactersCount int, cellHeight int, rowsInitialPadding int32, textPadding int32, row int32) {

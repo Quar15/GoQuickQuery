@@ -45,6 +45,17 @@ type EditorGrid struct {
 	MaxWidth  float32
 }
 
+func NewEditorGrid() EditorGrid {
+	return EditorGrid{
+		Text:      []string{},
+		Rows:      0,
+		Cols:      []int32{0},
+		Highlight: [][]HighlightColorEnum{},
+		MaxCol:    0,
+		MaxWidth:  0,
+	}
+}
+
 func (eg *EditorGrid) UpdateHighlight(fromRow int32, toRow int32) {
 	for row := fromRow; row <= toRow; row++ {
 		if eg.Cols[row] == 0 {
@@ -214,6 +225,27 @@ func LoadEditorGridFromTextFile(path string, appAssets *assets.Assets) (*EditorG
 
 	eg.UpdateHighlight(0, eg.Rows-1)
 	return eg, nil
+}
+
+func (eg *EditorGrid) DetectQueryRowsBoundaryBasedOnRow(row int32) (start int32, end int32) {
+	start = row
+	end = row
+
+	for start > 0 {
+		if eg.Cols[start-1] == 0 {
+			break
+		}
+		start--
+	}
+
+	for end < eg.Rows-1 {
+		if eg.Cols[end+1] == 0 {
+			break
+		}
+		end++
+	}
+
+	return start, end
 }
 
 func isWordChar(c byte) bool {

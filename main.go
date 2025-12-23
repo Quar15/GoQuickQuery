@@ -162,9 +162,7 @@ func main() {
 	var commandZoneHeight float32 = (appAssets.MainFontSize*2 + appAssets.MainFontSpacing*2)
 
 	var dg database.DataGrid
-	var eg display.EditorGrid
-
-	eg.FakeInit(&appAssets)
+	var eg display.EditorGrid = display.NewEditorGrid()
 
 	rl.SetTargetFPS(60)
 

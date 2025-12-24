@@ -22,7 +22,7 @@ func (z *Zone) DrawCommandZone(appAssets *assets.Assets, c *Cursor, currConnName
 	switch c.Type {
 	case CursorTypeSpreadsheet:
 		if c.Position.MaxRow > 0 {
-			cursorPercentage = int8(100 * ((c.Position.Row-1)*c.Position.MaxCol + c.Position.Col) / (c.Position.MaxRow * c.Position.MaxCol))
+			cursorPercentage = int8(100 * ((c.Position.Row)*c.Position.MaxCol + c.Position.Col) / (c.Position.MaxRow * c.Position.MaxCol))
 		}
 	case CursorTypeEditor:
 		// @TODO: Get info about cursor status via editor grid

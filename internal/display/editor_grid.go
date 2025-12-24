@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"strings"
+	"sync"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
@@ -23,17 +24,22 @@ const (
 	HighlightNormal
 )
 
-var highlightColor = map[HighlightColorEnum]rl.Color{
-	// @TODO: Consider moving to color config
-	HighlightKeyword:     config.Get().Colors.Mauve(),
-	HighlightFunction:    config.Get().Colors.Blue(),
-	HighlightDatabaseVar: config.Get().Colors.Yellow(),
-	HighlightText:        config.Get().Colors.Green(),
-	HighlightNumber:      config.Get().Colors.Peach(),
-	HighlightNormal:      config.Get().Colors.Text(),
-}
+var setupHighlightColorOnce sync.Once
+var highlightColor = map[HighlightColorEnum]rl.Color{}
 
 func (hc HighlightColorEnum) Color() rl.Color {
+	setupHighlightColorOnce.Do(func() {
+		highlightColor = map[HighlightColorEnum]rl.Color{
+			// @TODO: Consider moving to color config
+			HighlightKeyword:     config.Get().Colors.Mauve(),
+			HighlightFunction:    config.Get().Colors.Blue(),
+			HighlightDatabaseVar: config.Get().Colors.Yellow(),
+			HighlightText:        config.Get().Colors.Green(),
+			HighlightNumber:      config.Get().Colors.Peach(),
+			HighlightNormal:      config.Get().Colors.Text(),
+		}
+
+	})
 	return highlightColor[hc]
 }
 

@@ -9,10 +9,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func init() {
-	_, _ = Load()
-}
-
 type Config struct {
 	Connections []database.ConnectionData `yaml:"connections"`
 	Colors      colors                    `yaml:"colors,omitempty"`

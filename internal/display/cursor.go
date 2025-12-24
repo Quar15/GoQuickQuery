@@ -3,6 +3,7 @@ package display
 import (
 	"regexp"
 	"strconv"
+	"sync"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
@@ -34,16 +35,20 @@ func (cm CursorMode) String() string {
 	return modeName[cm]
 }
 
-var modeColor = map[CursorMode]rl.Color{
-	ModeNormal:  config.Get().Colors.NormalMode(),
-	ModeInsert:  config.Get().Colors.InsertMode(),
-	ModeVisual:  config.Get().Colors.VisualMode(),
-	ModeVLine:   config.Get().Colors.VisualMode(),
-	ModeVBlock:  config.Get().Colors.VisualMode(),
-	ModeCommand: config.Get().Colors.NormalMode(),
-}
+var setupColorOnce sync.Once
+var modeColor = map[CursorMode]rl.Color{}
 
 func (cm CursorMode) Color() rl.Color {
+	setupColorOnce.Do(func() {
+		modeColor = map[CursorMode]rl.Color{
+			ModeNormal:  config.Get().Colors.NormalMode(),
+			ModeInsert:  config.Get().Colors.InsertMode(),
+			ModeVisual:  config.Get().Colors.VisualMode(),
+			ModeVLine:   config.Get().Colors.VisualMode(),
+			ModeVBlock:  config.Get().Colors.VisualMode(),
+			ModeCommand: config.Get().Colors.NormalMode(),
+		}
+	})
 	return modeColor[cm]
 }
 

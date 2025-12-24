@@ -2,8 +2,6 @@ package display
 
 import (
 	rl "github.com/gen2brain/raylib-go/raylib"
-	"github.com/quar15/qq-go/internal/assets"
-	"github.com/quar15/qq-go/internal/colors"
 )
 
 type Zone struct {
@@ -25,17 +23,6 @@ func (z *Zone) drawScrollbars() {
 	if z.ContentSize.X > z.Bounds.Width {
 		z.hScrollbar.Draw()
 	}
-}
-
-func (z *Zone) Draw(appAssets *assets.Assets) {
-	rl.BeginScissorMode(int32(z.Bounds.X), int32(z.Bounds.Y), int32(z.Bounds.Width), int32(z.Bounds.Height))
-	rl.ClearBackground(colors.Background())
-
-	rl.DrawTextEx(appAssets.MainFont, "TESTING ABCDEFGHIJKLMNOPRSTUWXYZ", rl.Vector2{X: z.Bounds.X + 20 - z.Scroll.X, Y: z.Bounds.Y + 20 - z.Scroll.Y}, appAssets.MainFontSize, appAssets.MainFontSpacing, colors.Text())
-
-	rl.EndScissorMode()
-
-	z.drawScrollbars()
 }
 
 func (z *Zone) ClampScrollsToZoneSize() {

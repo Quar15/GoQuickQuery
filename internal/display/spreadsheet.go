@@ -5,7 +5,7 @@ import (
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
-	"github.com/quar15/qq-go/internal/colors"
+	"github.com/quar15/qq-go/internal/config"
 	"github.com/quar15/qq-go/internal/database"
 	"github.com/quar15/qq-go/internal/format"
 )
@@ -41,7 +41,7 @@ func (z *Zone) DrawSpreadsheetZone(appAssets *assets.Assets, dg *database.DataGr
 	rl.EndScissorMode()
 
 	// Draw static header
-	rl.DrawRectangle(int32(z.Bounds.X), int32(z.Bounds.Y), int32(z.Bounds.Width), int32(cellHeight), colors.Surface0()) // Left upper corner fill
+	rl.DrawRectangle(int32(z.Bounds.X), int32(z.Bounds.Y), int32(z.Bounds.Width), int32(cellHeight), config.Get().Colors.Surface0()) // Left upper corner fill
 	renderSpreadsheetHeadersRow(z, appAssets, dg, counterColumnWidth, cellHeight, textPadding, mouse)
 
 	z.ContentSize.Y = max(float32(contentHeight), z.Bounds.Height)
@@ -59,14 +59,14 @@ func renderContentRow(z *Zone, appAssets *assets.Assets, dg *database.DataGrid, 
 		}
 		var cellY int32 = int32(z.Bounds.Y) + (row+1)*int32(cellHeight) - int32(z.Scroll.Y)
 
-		var cellBackgroundColor rl.Color = colors.Background()
-		var cellBorderColor rl.Color = colors.Mantle()
-		if cursor.IsActive() && cursor.IsFocused(int32(col), row) {
-			cellBackgroundColor = colors.Mantle()
-			cellBorderColor = colors.Blue()
+		var cellBackgroundColor rl.Color = config.Get().Colors.Background()
+		var cellBorderColor rl.Color = config.Get().Colors.Mantle()
+		if cursor.IsFocused(int32(col), row) {
+			cellBackgroundColor = config.Get().Colors.Mantle()
+			cellBorderColor = config.Get().Colors.Accent()
 		}
 		if cursor.IsActive() && cursor.IsSelected(int32(col), row) {
-			cellBackgroundColor = colors.Surface1()
+			cellBackgroundColor = config.Get().Colors.Surface1()
 		}
 		var cellRect rl.RectangleInt32 = rl.RectangleInt32{X: cellX, Y: cellY, Width: dg.ColumnsWidth[col], Height: int32(cellHeight)}
 		rl.DrawRectangleRec(cellRect.ToFloat32(), cellBackgroundColor)
@@ -85,7 +85,7 @@ func renderContentRow(z *Zone, appAssets *assets.Assets, dg *database.DataGrid, 
 		appAssets.DrawTextMainFont(
 			cellText[:cellTextSliceLimit],
 			rl.Vector2{X: float32(cellX + textPadding), Y: float32(cellY + textPadding)},
-			colors.Text(),
+			config.Get().Colors.Text(),
 		)
 		rl.DrawRectangleLinesEx(
 			rl.Rectangle{
@@ -104,14 +104,14 @@ func renderSpreadsheetCounterColumnRow(z *Zone, appAssets *assets.Assets, counte
 	var cellX int32 = int32(z.Bounds.X)
 	var cellY int32 = int32(z.Bounds.Y) + (row+1)*int32(cellHeight) - int32(z.Scroll.Y)
 
-	var bg rl.Color = colors.Surface0()
+	var bg rl.Color = config.Get().Colors.Surface0()
 	if z.MouseInside(mouse) && mouse.Y > float32(cellY) && mouse.Y < float32(cellY)+float32(cellHeight) {
-		bg = colors.Mantle()
+		bg = config.Get().Colors.Mantle()
 	}
 	var counterColumnLeftPadding float32 = float32(textPadding) + float32(counterColumnCharactersCount-format.CountDigits(int(row)+1))*appAssets.MainFontCharacterWidth
 	rl.DrawRectangle(cellX, cellY, int32(counterColumnWidth), int32(cellHeight), bg)
-	rl.DrawLineEx(rl.Vector2{X: float32(cellX), Y: float32(cellY)}, rl.Vector2{X: float32(cellX + int32(counterColumnWidth)), Y: float32(cellY)}, 2, colors.Surface1())
-	appAssets.DrawTextMainFont(strconv.Itoa(int(row+1)), rl.Vector2{X: float32(cellX) + counterColumnLeftPadding, Y: float32(cellY + textPadding)}, colors.Overlay0())
+	rl.DrawLineEx(rl.Vector2{X: float32(cellX), Y: float32(cellY)}, rl.Vector2{X: float32(cellX + int32(counterColumnWidth)), Y: float32(cellY)}, 2, config.Get().Colors.Surface1())
+	appAssets.DrawTextMainFont(strconv.Itoa(int(row+1)), rl.Vector2{X: float32(cellX) + counterColumnLeftPadding, Y: float32(cellY + textPadding)}, config.Get().Colors.Overlay0())
 }
 
 func renderSpreadsheetHeadersRow(z *Zone, appAssets *assets.Assets, dg *database.DataGrid, counterColumnWidth int, cellHeight int, textPadding int32, mouse rl.Vector2) {
@@ -122,13 +122,13 @@ func renderSpreadsheetHeadersRow(z *Zone, appAssets *assets.Assets, dg *database
 		}
 		var cellY int32 = int32(z.Bounds.Y)
 
-		var bg rl.Color = colors.Surface0()
+		var bg rl.Color = config.Get().Colors.Surface0()
 		if z.MouseInside(mouse) && mouse.X > float32(cellX) && mouse.X < float32(cellX)+float32(dg.ColumnsWidth[col]) {
-			bg = colors.Mantle()
+			bg = config.Get().Colors.Mantle()
 		}
 		rl.DrawRectangle(cellX, cellY, dg.ColumnsWidth[col], int32(cellHeight), bg)
-		rl.DrawLineEx(rl.Vector2{X: float32(cellX), Y: float32(cellY)}, rl.Vector2{X: float32(cellX), Y: float32(cellY + int32(cellHeight))}, 2, colors.Surface1())
-		appAssets.DrawTextMainFont(dg.Headers[col], rl.Vector2{X: float32(cellX + textPadding), Y: float32(cellY + textPadding)}, colors.Text())
+		rl.DrawLineEx(rl.Vector2{X: float32(cellX), Y: float32(cellY)}, rl.Vector2{X: float32(cellX), Y: float32(cellY + int32(cellHeight))}, 2, config.Get().Colors.Surface1())
+		appAssets.DrawTextMainFont(dg.Headers[col], rl.Vector2{X: float32(cellX + textPadding), Y: float32(cellY + textPadding)}, config.Get().Colors.Text())
 	}
 }
 

@@ -2,7 +2,7 @@ package display
 
 import (
 	"github.com/gen2brain/raylib-go/raylib"
-	"github.com/quar15/qq-go/internal/colors"
+	"github.com/quar15/qq-go/internal/config"
 )
 
 type Splitter struct {
@@ -38,8 +38,8 @@ func (splitter *Splitter) HandleZoneSplit(screenWidth int, screenHeight int, com
 }
 
 func (splitter *Splitter) Draw() {
-	var defaultColor rl.Color = colors.Crust()
-	var focusColor rl.Color = colors.Blue()
+	var defaultColor rl.Color = config.Get().Colors.Crust()
+	var focusColor rl.Color = config.Get().Colors.Accent()
 	rl.DrawRectangleRec(splitter.Rect, defaultColor)
 	switch CurrCursor.Type {
 	case CursorTypeEditor:

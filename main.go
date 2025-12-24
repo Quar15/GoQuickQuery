@@ -13,7 +13,6 @@ import (
 	"golang.design/x/clipboard"
 
 	"github.com/quar15/qq-go/internal/assets"
-	"github.com/quar15/qq-go/internal/colors"
 	"github.com/quar15/qq-go/internal/config"
 	"github.com/quar15/qq-go/internal/database"
 	"github.com/quar15/qq-go/internal/display"
@@ -109,15 +108,14 @@ func handleQuery(appAssets *assets.Assets, cursor *display.Cursor, dg *database.
 }
 
 func main() {
-	cfg, err := config.LoadConfig("./config/gqq.yaml")
+	err := initialize()
+	if err != nil {
+		panic("Failed to initialize")
+	}
+	cfg, err := config.Load()
 	if err != nil {
 		slog.Error("Failed to read config", slog.Any("error", err))
 		os.Exit(1)
-	}
-	*config.Cfg = *cfg
-	err = initialize()
-	if err != nil {
-		panic("Failed to initialize")
 	}
 	connMgr := database.NewConnectionManager(cfg.Connections, &database.DefaultConnectionFactory{})
 	defer connMgr.Close(context.Background())
@@ -187,7 +185,7 @@ func main() {
 
 		// --- Drawing ---
 		rl.BeginDrawing()
-		rl.ClearBackground(colors.Background())
+		rl.ClearBackground(cfg.Colors.Background())
 
 		editorIsFocused := (display.CurrCursor.Type == display.CursorTypeEditor)
 		topZone.DrawEditor(&appAssets, &eg, display.CursorEditor, editorIsFocused)

@@ -3,7 +3,6 @@ package display
 import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
-	"github.com/quar15/qq-go/internal/colors"
 	"github.com/quar15/qq-go/internal/config"
 	"github.com/quar15/qq-go/internal/database"
 )
@@ -13,7 +12,7 @@ func (z *Zone) DrawConnectionSelector(appAssets *assets.Assets, config *config.C
 	const maxVisibleConnections int = 5
 	const textPadding int32 = 6
 	var cellHeight = appAssets.MainFont.BaseSize + textPadding*2
-	var bgColor rl.Color = colors.Mantle()
+	var bgColor rl.Color = config.Colors.Mantle()
 
 	var x int32 = (screenWidth - boxWidth) / 2
 	renderedConnectionsN := len(config.Connections)
@@ -47,7 +46,7 @@ func (z *Zone) DrawConnectionSelector(appAssets *assets.Assets, config *config.C
 		boxRoundness,
 		0.0,
 		2,
-		colors.Blue(),
+		config.Colors.Accent(),
 	)
 	const boxHeaderText string = "Connections:"
 	var boxHeaderTextWidth int32 = int32(appAssets.MeasureTextMainFont(boxHeaderText).X) + textPadding*2
@@ -56,7 +55,7 @@ func (z *Zone) DrawConnectionSelector(appAssets *assets.Assets, config *config.C
 	appAssets.DrawTextMainFont(
 		"Connections:",
 		rl.Vector2{X: float32(boxHeaderTextX), Y: float32(y)},
-		colors.Blue(),
+		config.Colors.Accent(),
 	)
 
 	const initialSelectionsTopPadding float32 = 20
@@ -74,7 +73,7 @@ func (z *Zone) DrawConnectionSelector(appAssets *assets.Assets, config *config.C
 		int32(z.Bounds.Y)+(cursor.Position.Row*cellHeight)-int32(z.Scroll.Y)-textPadding,
 		boxWidth,
 		cellHeight,
-		colors.Surface0(),
+		config.Colors.Surface0(),
 	)
 
 	rl.BeginScissorMode(int32(z.Bounds.X), int32(z.Bounds.Y), int32(z.Bounds.Width), int32(z.Bounds.Height))
@@ -93,9 +92,9 @@ func (z *Zone) DrawConnectionSelector(appAssets *assets.Assets, config *config.C
 		if len(displayName) > int(maxNumberOfCharacters) {
 			displayName = displayName[:maxNumberOfCharacters]
 		}
-		var connTextColor rl.Color = colors.Text()
+		var connTextColor rl.Color = config.Colors.Text()
 		if conn.Name == connManager.GetCurrentConnectionName() {
-			connTextColor = colors.Blue()
+			connTextColor = config.Colors.Accent()
 		}
 		var cellY float32 = z.Bounds.Y + float32(i*cellHeight) - z.Scroll.Y
 		appAssets.DrawTextMainFont(
@@ -115,7 +114,7 @@ func (z *Zone) DrawConnectionSelector(appAssets *assets.Assets, config *config.C
 			rl.White,
 		)
 		if connManager.IsConnectionAlive(conn.Name) {
-			rl.DrawCircle(boxRectangle.X+iconPadding+iconWidth, int32(cellY)+iconHeight, connStatusCircleRadius, colors.Green())
+			rl.DrawCircle(boxRectangle.X+iconPadding+iconWidth, int32(cellY)+iconHeight, connStatusCircleRadius, config.Colors.Green())
 		}
 	}
 	rl.EndScissorMode()

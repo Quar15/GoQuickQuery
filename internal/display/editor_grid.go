@@ -8,7 +8,7 @@ import (
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
-	"github.com/quar15/qq-go/internal/colors"
+	"github.com/quar15/qq-go/internal/config"
 	"github.com/quar15/qq-go/internal/database"
 )
 
@@ -24,12 +24,12 @@ const (
 )
 
 var highlightColor = map[HighlightColorEnum]rl.Color{
-	HighlightKeyword:     colors.Mauve(),
-	HighlightFunction:    colors.Blue(),
-	HighlightDatabaseVar: colors.Yellow(),
-	HighlightText:        colors.Green(),
-	HighlightNumber:      colors.Peach(),
-	HighlightNormal:      colors.Text(),
+	HighlightKeyword:     config.Get().Colors.Mauve(),
+	HighlightFunction:    config.Get().Colors.Blue(),
+	HighlightDatabaseVar: config.Get().Colors.Yellow(),
+	HighlightText:        config.Get().Colors.Green(),
+	HighlightNumber:      config.Get().Colors.Peach(),
+	HighlightNormal:      config.Get().Colors.Text(),
 }
 
 func (hc HighlightColorEnum) Color() rl.Color {

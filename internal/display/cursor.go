@@ -6,7 +6,7 @@ import (
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
-	"github.com/quar15/qq-go/internal/colors"
+	"github.com/quar15/qq-go/internal/config"
 	"github.com/quar15/qq-go/internal/database"
 )
 
@@ -35,12 +35,12 @@ func (cm CursorMode) String() string {
 }
 
 var modeColor = map[CursorMode]rl.Color{
-	ModeNormal:  colors.Blue(),
-	ModeInsert:  colors.Green(),
-	ModeVisual:  colors.Mauve(),
-	ModeVLine:   colors.Mauve(),
-	ModeVBlock:  colors.Mauve(),
-	ModeCommand: colors.Peach(),
+	ModeNormal:  config.Get().Colors.NormalMode(),
+	ModeInsert:  config.Get().Colors.InsertMode(),
+	ModeVisual:  config.Get().Colors.VisualMode(),
+	ModeVLine:   config.Get().Colors.VisualMode(),
+	ModeVBlock:  config.Get().Colors.VisualMode(),
+	ModeCommand: config.Get().Colors.NormalMode(),
 }
 
 func (cm CursorMode) Color() rl.Color {

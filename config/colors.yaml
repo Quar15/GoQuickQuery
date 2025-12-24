@@ -1,0 +1,8 @@
+# Colors support set of default names and hex values
+background: "#1e1e2e"
+text: "text"
+accent: "mauve"
+insert_mode: "green"
+visual_mode: "mauve"
+normal_mode: "blue"
+comand_mode: "peach"

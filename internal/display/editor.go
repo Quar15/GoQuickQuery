@@ -5,7 +5,7 @@ import (
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
-	"github.com/quar15/qq-go/internal/colors"
+	"github.com/quar15/qq-go/internal/config"
 	"github.com/quar15/qq-go/internal/format"
 )
 
@@ -26,7 +26,6 @@ func (z *Zone) DrawEditor(appAssets *assets.Assets, eg *EditorGrid, cursor *Curs
 	scrollRow, lastRowToRender := updateEditorScrollBasedOnCursor(z, cursor, cellHeight, linesPadding)
 
 	rl.BeginScissorMode(int32(z.Bounds.X), int32(z.Bounds.Y), int32(z.Bounds.Width), int32(z.Bounds.Height))
-	rl.ClearBackground(colors.Background())
 
 	for row := scrollRow; row < lastRowToRender; row++ {
 		renderEditorTextRow(z, appAssets, eg, cursor, counterColumnWidth, cellHeight, rowsInitialPadding, textPadding, row)
@@ -59,7 +58,7 @@ func renderEditorTextRow(z *Zone, appAssets *assets.Assets, eg *EditorGrid, curs
 						Width:  appAssets.MainFontCharacterWidth,
 						Height: appAssets.MainFontSize,
 					},
-					colors.Surface1(),
+					config.Get().Colors.Surface1(),
 				)
 			}
 			rl.DrawTextEx(
@@ -91,14 +90,14 @@ func renderEditorDetectedQueryOutline(z *Zone, appAssets *assets.Assets, eg *Edi
 	}
 	outlineRect.Width = float32(maxCols+1) * appAssets.MainFontCharacterWidth
 
-	rl.DrawRectangleLinesEx(outlineRect, 2, colors.Blue())
+	rl.DrawRectangleLinesEx(outlineRect, 2, config.Get().Colors.Accent())
 }
 
 func renderEditorRowCounter(z *Zone, appAssets *assets.Assets, counterColumnCharactersCount int, cellHeight int, rowsInitialPadding int32, textPadding int32, row int32) {
 	var counterColumnLeftPadding float32 = float32(textPadding) + float32(counterColumnCharactersCount-format.CountDigits(int(row)+1))*appAssets.MainFontCharacterWidth
 	var cellX float32 = z.Bounds.X + counterColumnLeftPadding
 	var cellY float32 = z.Bounds.Y + float32(row*int32(cellHeight)) - z.Scroll.Y + float32(rowsInitialPadding)
-	appAssets.DrawTextMainFont(strconv.Itoa(int(row+1)), rl.Vector2{X: cellX, Y: cellY}, colors.Overlay0())
+	appAssets.DrawTextMainFont(strconv.Itoa(int(row+1)), rl.Vector2{X: cellX, Y: cellY}, config.Get().Colors.Overlay0())
 }
 
 func renderEditorCursor(z *Zone, appAssets *assets.Assets, eg *EditorGrid, cursor *Cursor, counterColumnWidth int, cellHeight int, rowsInitialPadding int32, textPadding int32) {
@@ -111,7 +110,7 @@ func renderEditorCursor(z *Zone, appAssets *assets.Assets, eg *EditorGrid, curso
 			int32(cellY),
 			int32(appAssets.MainFontCharacterWidth),
 			appAssets.MainFont.BaseSize,
-			colors.Text(),
+			config.Get().Colors.Text(),
 		)
 		rl.DrawTextEx(
 			appAssets.MainFont,
@@ -119,7 +118,7 @@ func renderEditorCursor(z *Zone, appAssets *assets.Assets, eg *EditorGrid, curso
 			rl.Vector2{X: float32(cellX), Y: float32(cellY)},
 			appAssets.MainFontSize,
 			appAssets.MainFontSpacing,
-			colors.Background(),
+			config.Get().Colors.Background(),
 		)
 	} else {
 		// Empty row
@@ -128,7 +127,7 @@ func renderEditorCursor(z *Zone, appAssets *assets.Assets, eg *EditorGrid, curso
 			int32(cellY),
 			int32(appAssets.MainFontCharacterWidth),
 			appAssets.MainFont.BaseSize,
-			colors.Text(),
+			config.Get().Colors.Text(),
 		)
 	}
 }

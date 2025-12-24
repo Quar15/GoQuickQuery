@@ -176,7 +176,7 @@ func (ConnectionsCursorStateHandler) HandleInput(appAssets *assets.Assets, dg *d
 		} else {
 			switch {
 			case rl.IsKeyPressed(rl.KeyEnter):
-				err := connManager.SetCurrentConnectionByName(config.Cfg.Connections[CursorConnection.Position.Row].Name)
+				err := connManager.SetCurrentConnectionByName(config.Get().Connections[CursorConnection.Position.Row].Name)
 				if err != nil {
 					slog.Error("Failed to set current connection by name", slog.Any("error", err))
 				}

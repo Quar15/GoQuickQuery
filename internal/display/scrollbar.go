@@ -19,6 +19,6 @@ func (s *Scrollbar) Draw() {
 	if s.Dragging {
 		scrollbarColor = config.Get().Colors.Surface1()
 	}
-	rl.DrawRectangleRec(s.Track, scrollbarColor)
+	rl.DrawRectangleRec(s.Thumb, scrollbarColor)
 }
 

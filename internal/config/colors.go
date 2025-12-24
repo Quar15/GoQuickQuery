@@ -144,10 +144,10 @@ func (c *ColorsConfig) MergeDefaults() {
 		c.Crust.Color = crust
 	}
 	if c.Overlay0.Color == defaultColor {
-		c.Overlay0.Color = surface0
+		c.Overlay0.Color = overlay0
 	}
 	if c.Overlay1.Color == defaultColor {
-		c.Overlay1.Color = surface0
+		c.Overlay1.Color = overlay1
 	}
 	if c.Surface0.Color == defaultColor {
 		c.Surface0.Color = surface0
@@ -221,6 +221,7 @@ func (c *colors) Surface1() rl.Color {
 	return c.cfg.Surface1.Color
 }
 
+// @TODO: Consider moving to config static functions
 func (c *colors) Blue() rl.Color {
 	return blue
 }

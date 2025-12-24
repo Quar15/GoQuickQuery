@@ -1,6 +1,7 @@
 package display
 
 import (
+	"fmt"
 	"strconv"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -46,6 +47,7 @@ func (z *Zone) DrawSpreadsheetZone(appAssets *assets.Assets, dg *database.DataGr
 
 	z.ContentSize.Y = max(float32(contentHeight), z.Bounds.Height)
 	z.ContentSize.X = max(float32(contentWidth), z.Bounds.Width)
+	fmt.Printf("%f | %d | %f\n", z.ContentSize.Y, contentHeight, z.Bounds.Height)
 	z.drawScrollbars()
 }
 

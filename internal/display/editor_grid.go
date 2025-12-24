@@ -24,6 +24,7 @@ const (
 )
 
 var highlightColor = map[HighlightColorEnum]rl.Color{
+	// @TODO: Consider moving to color config
 	HighlightKeyword:     config.Get().Colors.Mauve(),
 	HighlightFunction:    config.Get().Colors.Blue(),
 	HighlightDatabaseVar: config.Get().Colors.Yellow(),

@@ -14,9 +14,11 @@ import (
 
 	"github.com/quar15/qq-go/internal/assets"
 	"github.com/quar15/qq-go/internal/config"
+	"github.com/quar15/qq-go/internal/cursor"
 	"github.com/quar15/qq-go/internal/database"
 	"github.com/quar15/qq-go/internal/display"
 	"github.com/quar15/qq-go/internal/format"
+	"github.com/quar15/qq-go/internal/motion"
 )
 
 func initialize() error {
@@ -107,6 +109,45 @@ func handleQuery(appAssets *assets.Assets, cursor *display.Cursor, dg *database.
 	}
 }
 
+func testOutMotions(cursor *display.Cursor) {
+
+	// Initializing mode and motions
+	root := motion.NewTrie()
+
+	root.Insert([]motion.Key{
+		{Code: motion.KeyRune, Rune: 'h'},
+	}, motion.MoveLeft{})
+
+	root.Insert([]motion.Key{
+		{Code: motion.KeyRune, Rune: 'j'},
+	}, motion.MoveDown{})
+
+	root.Insert([]motion.Key{
+		{Code: motion.KeyRune, Rune: 'k'},
+	}, motion.MoveUp{})
+
+	root.Insert([]motion.Key{
+		{Code: motion.KeyRune, Rune: 'l'},
+	}, motion.MoveRight{})
+
+	// Parsing motions
+	parser := motion.NewParser(root)
+
+	// Fake input
+	input := []motion.Key{
+		{Code: motion.KeyRune, Rune: '1'},
+		{Code: motion.KeyRune, Rune: '0'},
+		{Code: motion.KeyRune, Rune: 'j'},
+	}
+
+	for _, k := range input {
+		res := parser.Feed(k)
+		if res.Done && res.Valid {
+			cursor.Position = res.Motion.Apply(cursor.Position, res.Count)
+		}
+	}
+}
+
 func main() {
 	err := initialize()
 	if err != nil {
@@ -152,6 +193,7 @@ func main() {
 	display.CursorConnection.Position.MaxRow = int32(connMgr.GetNumberOfConnections()) - 1
 	display.CurrCursor = display.CursorEditor
 	display.CurrCursor.SetActive(true)
+	testOutMotions(display.CurrCursor)
 
 	topZone.ContentSize = rl.Vector2{X: 1600, Y: 1200}
 	bottomZone.ContentSize = rl.Vector2{X: 2000, Y: 2000}
@@ -187,14 +229,14 @@ func main() {
 		rl.BeginDrawing()
 		rl.ClearBackground(cfg.Colors.Background())
 
-		editorIsFocused := (display.CurrCursor.Type == display.CursorTypeEditor)
+		editorIsFocused := (display.CurrCursor.Type == cursor.TypeEditor)
 		topZone.DrawEditor(&appAssets, &eg, display.CursorEditor, editorIsFocused)
 		bottomZone.DrawSpreadsheetZone(&appAssets, &dg, display.CursorSpreadsheet)
 		commandZone.DrawCommandZone(&appAssets, display.CurrCursor, connMgr.GetCurrentConnectionName())
 
 		splitter.Draw()
 
-		if display.CurrCursor.Type == display.CursorTypeConnections {
+		if display.CurrCursor.Type == cursor.TypeConnections {
 			connectionsZone.DrawConnectionSelector(&appAssets, cfg, display.CursorConnection, int32(screenWidth), int32(screenHeight), connMgr)
 		}
 

@@ -6,6 +6,7 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
 	"github.com/quar15/qq-go/internal/config"
+	"github.com/quar15/qq-go/internal/cursor"
 )
 
 func (z *Zone) DrawCommandZone(appAssets *assets.Assets, c *Cursor, currConnName string) {
@@ -20,11 +21,11 @@ func (z *Zone) DrawCommandZone(appAssets *assets.Assets, c *Cursor, currConnName
 	appAssets.DrawTextMainFont(modeStatusText, rl.Vector2{X: z.Bounds.X + textSpacing*2, Y: z.Bounds.Y + textSpacing/2}, config.Get().Colors.Mantle())
 	var cursorPercentage int8 = 0
 	switch c.Type {
-	case CursorTypeSpreadsheet:
+	case cursor.TypeSpreadsheet:
 		if c.Position.MaxRow > 0 {
 			cursorPercentage = int8(100 * ((c.Position.Row)*c.Position.MaxCol + c.Position.Col) / (c.Position.MaxRow * c.Position.MaxCol))
 		}
-	case CursorTypeEditor:
+	case cursor.TypeEditor:
 		// @TODO: Get info about cursor status via editor grid
 		cursorPercentage = 0
 	}

@@ -3,6 +3,7 @@ package display
 import (
 	"github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/config"
+	"github.com/quar15/qq-go/internal/cursor"
 )
 
 type Splitter struct {
@@ -42,12 +43,12 @@ func (splitter *Splitter) Draw() {
 	var focusColor rl.Color = config.Get().Colors.Accent()
 	rl.DrawRectangleRec(splitter.Rect, defaultColor)
 	switch CurrCursor.Type {
-	case CursorTypeEditor:
+	case cursor.TypeEditor:
 		var newRect rl.Rectangle = splitter.Rect
 		newRect.Width /= 2
 		newRect.Height /= 2
 		rl.DrawRectangleRec(newRect, focusColor)
-	case CursorTypeSpreadsheet:
+	case cursor.TypeSpreadsheet:
 		var newRect rl.Rectangle = splitter.Rect
 		newRect.Width /= 2
 		newRect.Height /= 2

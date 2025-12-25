@@ -3,87 +3,13 @@ package display
 import (
 	"regexp"
 	"strconv"
-	"sync"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
-	"github.com/quar15/qq-go/internal/config"
+	"github.com/quar15/qq-go/internal/cursor"
 	"github.com/quar15/qq-go/internal/database"
+	"github.com/quar15/qq-go/internal/motion"
 )
-
-type CursorMode int8
-
-const (
-	ModeNormal CursorMode = iota
-	ModeInsert
-	ModeVisual
-	ModeVLine
-	ModeVBlock
-	ModeCommand
-)
-
-var modeName = map[CursorMode]string{
-	ModeNormal:  "NORMAL",
-	ModeInsert:  "INSERT",
-	ModeVisual:  "VISUAL",
-	ModeVLine:   "V-LINE",
-	ModeVBlock:  "V-BLOCK",
-	ModeCommand: "COMMAND",
-}
-
-func (cm CursorMode) String() string {
-	return modeName[cm]
-}
-
-var setupColorOnce sync.Once
-var modeColor = map[CursorMode]rl.Color{}
-
-func (cm CursorMode) Color() rl.Color {
-	setupColorOnce.Do(func() {
-		modeColor = map[CursorMode]rl.Color{
-			ModeNormal:  config.Get().Colors.NormalMode(),
-			ModeInsert:  config.Get().Colors.InsertMode(),
-			ModeVisual:  config.Get().Colors.VisualMode(),
-			ModeVLine:   config.Get().Colors.VisualMode(),
-			ModeVBlock:  config.Get().Colors.VisualMode(),
-			ModeCommand: config.Get().Colors.NormalMode(),
-		}
-	})
-	return modeColor[cm]
-}
-
-type CursorPosition struct {
-	Col             int32
-	Row             int32
-	MaxCol          int32
-	MaxRow          int32
-	SelectStartCol  int32
-	SelectStartRow  int32
-	SelectEndCol    int32
-	SelectEndRow    int32
-	SelectAnchorCol int32
-	SelectAnchorRow int32
-}
-
-func (c *CursorPosition) Reset() {
-	c.SelectStartCol = -1
-	c.SelectStartRow = -1
-	c.SelectEndCol = -1
-	c.SelectEndRow = -1
-}
-
-func (c *CursorPosition) Init() {
-	c.Col = 0
-	c.Row = 0
-	c.Reset()
-}
-
-type CursorCommon struct {
-	Mode      CursorMode
-	CmdBuf    string
-	MotionBuf string
-	Logs      CommandLogs
-}
 
 type CursorHandler interface {
 	HandleInput(appAssets *assets.Assets, dg *database.DataGrid, eg *EditorGrid, cursor *Cursor, connManager *database.ConnectionManager)
@@ -100,34 +26,34 @@ const (
 )
 
 type Cursor struct {
-	Common   *CursorCommon
-	Position CursorPosition
+	Common   *cursor.Common
+	Position motion.CursorPosition
 	Handler  CursorHandler
-	Type     CursorType
+	Type     cursor.Type
 	Zone     *Zone
 	isActive bool
 }
 
-var cursorCommon *CursorCommon = &CursorCommon{}
+var cursorCommon *cursor.Common = &cursor.Common{}
 var CursorSpreadsheet *Cursor = &Cursor{
 	Common:   cursorCommon,
-	Position: CursorPosition{},
+	Position: motion.CursorPosition{},
 	Handler:  SpreadsheetCursorStateHandler{},
-	Type:     CursorTypeSpreadsheet,
+	Type:     cursor.TypeSpreadsheet,
 	isActive: false,
 }
 var CursorConnection *Cursor = &Cursor{
 	Common:   cursorCommon,
-	Position: CursorPosition{},
+	Position: motion.CursorPosition{},
 	Handler:  ConnectionsCursorStateHandler{},
-	Type:     CursorTypeConnections,
+	Type:     cursor.TypeConnections,
 	isActive: false,
 }
 var CursorEditor *Cursor = &Cursor{
 	Common:   cursorCommon,
-	Position: CursorPosition{},
+	Position: motion.CursorPosition{},
 	Handler:  EditorCursorStateHandler{},
-	Type:     CursorTypeEditor,
+	Type:     cursor.TypeEditor,
 	isActive: false,
 }
 var CurrCursor *Cursor
@@ -136,7 +62,7 @@ type BaseCursorHandler struct{}
 
 func (BaseCursorHandler) HandleInput(c *Cursor) {}
 func (BaseCursorHandler) Reset(c *Cursor) {
-	c.TransitionMode(ModeNormal)
+	c.TransitionMode(cursor.ModeNormal)
 	c.Position.Reset()
 	c.Common.CmdBuf = ""
 	c.Common.MotionBuf = ""
@@ -150,7 +76,7 @@ func (BaseCursorHandler) Init(c *Cursor, z *Zone) {
 	c.Zone = z
 }
 
-func (c *Cursor) TransitionMode(newMode CursorMode) {
+func (c *Cursor) TransitionMode(newMode cursor.Mode) {
 	c.Common.Mode = newMode
 }
 
@@ -160,7 +86,7 @@ func (c *Cursor) IsActive() bool {
 
 func (c *Cursor) SetActive(newState bool) {
 	c.isActive = newState
-	c.TransitionMode(ModeNormal)
+	c.TransitionMode(cursor.ModeNormal)
 }
 
 func (c *Cursor) SetSelect(startCol int32, startRow int32, endCol int32, endRow int32) {
@@ -170,16 +96,16 @@ func (c *Cursor) SetSelect(startCol int32, startRow int32, endCol int32, endRow 
 	c.Position.SelectEndRow = endRow
 	c.Position.SelectAnchorCol = startCol
 	c.Position.SelectAnchorRow = startRow
-	if c.Common.Mode != ModeVisual {
-		c.TransitionMode(ModeVisual)
+	if c.Common.Mode != cursor.ModeVisual {
+		c.TransitionMode(cursor.ModeVisual)
 	}
 }
 
 func (c *Cursor) UpdateSelectBasedOnPosition() {
 	switch c.Common.Mode {
-	case ModeVBlock:
+	case cursor.ModeVBlock:
 		fallthrough
-	case ModeVisual:
+	case cursor.ModeVisual:
 		if c.Position.Col < c.Position.SelectAnchorCol {
 			c.Position.SelectStartCol = c.Position.Col
 			c.Position.SelectEndCol = c.Position.SelectAnchorCol
@@ -201,7 +127,7 @@ func (c *Cursor) UpdateSelectBasedOnPosition() {
 			c.Position.SelectStartRow = c.Position.SelectAnchorRow
 			c.Position.SelectEndRow = c.Position.SelectAnchorRow
 		}
-	case ModeVLine:
+	case cursor.ModeVLine:
 		if c.Position.Row < c.Position.SelectAnchorRow {
 			c.Position.SelectStartRow = c.Position.Row
 			c.Position.SelectEndRow = c.Position.SelectAnchorRow
@@ -224,7 +150,7 @@ func (c *Cursor) ClampFocus(limitCol int32, limitRow int32) {
 	c.Position.MaxRow = limitRow
 	c.Position.Col = min(max(0, c.Position.Col), c.Position.MaxCol)
 	c.Position.Row = min(max(0, c.Position.Row), c.Position.MaxRow)
-	if c.Common.Mode == ModeVisual {
+	if c.Common.Mode == cursor.ModeVisual {
 		c.Position.SelectStartCol = min(max(0, c.Position.SelectStartCol), c.Position.MaxCol)
 		c.Position.SelectEndCol = min(max(0, c.Position.SelectEndCol), c.Position.MaxCol)
 		c.Position.SelectStartRow = min(max(0, c.Position.SelectStartRow), c.Position.MaxRow)
@@ -234,7 +160,7 @@ func (c *Cursor) ClampFocus(limitCol int32, limitRow int32) {
 
 func (c *Cursor) IsSelected(col int32, row int32) bool {
 	switch c.Common.Mode {
-	case ModeVisual:
+	case cursor.ModeVisual:
 		startRow, startCol := c.Position.SelectAnchorRow, c.Position.SelectAnchorCol
 		endRow, endCol := c.Position.Row, c.Position.Col
 
@@ -263,11 +189,11 @@ func (c *Cursor) IsSelected(col int32, row int32) bool {
 		default:
 			return false
 		}
-	case ModeVLine:
+	case cursor.ModeVLine:
 		if row >= c.Position.SelectStartRow && row <= c.Position.SelectEndRow {
 			return true
 		}
-	case ModeVBlock:
+	case cursor.ModeVBlock:
 		return col >= c.Position.SelectStartCol &&
 			col <= c.Position.SelectEndCol &&
 			row >= c.Position.SelectStartRow &&
@@ -318,11 +244,11 @@ func (c *Cursor) CheckForMotion() {
 		motionExecuted = true
 	case "V":
 		c.SetSelect(0, c.Position.Row, c.Position.MaxCol, c.Position.Row)
-		c.TransitionMode(ModeVLine)
+		c.TransitionMode(cursor.ModeVLine)
 		motionExecuted = true
 	case "^V":
 		c.SetSelect(c.Position.Col, c.Position.Row, c.Position.Col, c.Position.Row)
-		c.TransitionMode(ModeVBlock)
+		c.TransitionMode(cursor.ModeVBlock)
 		motionExecuted = true
 	case "v":
 		c.SetSelect(c.Position.Col, c.Position.Row, c.Position.Col, c.Position.Row)
@@ -331,11 +257,11 @@ func (c *Cursor) CheckForMotion() {
 		// @TODO: Consider swapping from connection cursor
 		// @TODO: Cleanup cursor and add transition functions
 		switch c.Type {
-		case CursorTypeEditor:
+		case cursor.TypeEditor:
 			CurrCursor.SetActive(false)
 			CurrCursor = CursorSpreadsheet
 			CurrCursor.SetActive(true)
-		case CursorTypeSpreadsheet:
+		case cursor.TypeSpreadsheet:
 			CurrCursor.SetActive(false)
 			CurrCursor = CursorEditor
 			CurrCursor.SetActive(true)
@@ -380,7 +306,7 @@ func (c *Cursor) ExecuteCommand() {
 	// @TODO
 	c.Common.Logs.Channel <- "Executed command"
 	c.Common.CmdBuf = "Executed"
-	c.Common.Mode = ModeNormal
+	c.Common.Mode = cursor.ModeNormal
 }
 
 type SpreadsheetCursorStateHandler struct {

@@ -48,7 +48,7 @@ type EditorGrid struct {
 	Rows      int32
 	Cols      []int32
 	Highlight [][]HighlightColorEnum
-	MaxCol    int8
+	MaxCol    int32
 	MaxWidth  float32
 }
 
@@ -215,7 +215,7 @@ func LoadEditorGridFromTextFile(path string, appAssets *assets.Assets) (*EditorG
 		eg.Cols = append(eg.Cols, int32(lineLen))
 		if maxCol < lineLen {
 			maxCol = lineLen
-			eg.MaxCol = int8(lineLen)
+			eg.MaxCol = lineLen
 			eg.MaxWidth = appAssets.MeasureTextMainFont(line).X
 		}
 

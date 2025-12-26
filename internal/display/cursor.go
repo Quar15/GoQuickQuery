@@ -63,7 +63,7 @@ type BaseCursorHandler struct{}
 func (BaseCursorHandler) HandleInput(c *Cursor) {}
 func (BaseCursorHandler) Reset(c *Cursor) {
 	c.TransitionMode(cursor.ModeNormal)
-	c.Position.Reset()
+	c.Position.ResetSelect()
 	c.Common.CmdBuf = ""
 	c.Common.MotionBuf = ""
 	c.UpdateCmdLine()

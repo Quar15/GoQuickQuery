@@ -1,10 +1,11 @@
 package motion
 
 type CursorPosition struct {
-	Col    int32
-	Row    int32
-	MaxCol int32
-	MaxRow int32
+	Col             int32
+	Row             int32
+	MaxCol          int32
+	MaxRow          int32
+	MaxColForRows   []int32
 	SelectStartCol  int32
 	SelectStartRow  int32
 	SelectEndCol    int32
@@ -14,21 +15,31 @@ type CursorPosition struct {
 }
 
 func (c CursorPosition) Clamp() CursorPosition {
-	c.Col = min(max(0, c.Col), c.MaxCol)
 	c.Row = min(max(0, c.Row), c.MaxRow)
+	if len(c.MaxColForRows) > 0 {
+		c.Col = min(max(0, c.Col), c.MaxColForRows[c.Row]-1)
+	} else {
+		c.Col = min(max(0, c.Col), c.MaxCol)
+	}
 
 	return c
 }
 
-func (c *CursorPosition) Reset() {
-	c.SelectStartCol = -1
-	c.SelectStartRow = -1
-	c.SelectEndCol = -1
-	c.SelectEndRow = -1
+func (c *CursorPosition) AnchorSelect() {
+	c.ResetSelect()
+	c.SelectAnchorCol = c.Col
+	c.SelectAnchorRow = c.Row
+}
+
+func (c *CursorPosition) ResetSelect() {
+	c.SelectStartCol = c.Col
+	c.SelectStartRow = c.Row
+	c.SelectEndCol = c.Col
+	c.SelectEndRow = c.Row
 }
 
 func (c *CursorPosition) Init() {
 	c.Col = 0
 	c.Row = 0
-	c.Reset()
+	c.ResetSelect()
 }

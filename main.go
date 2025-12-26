@@ -18,7 +18,9 @@ import (
 	"github.com/quar15/qq-go/internal/database"
 	"github.com/quar15/qq-go/internal/display"
 	"github.com/quar15/qq-go/internal/format"
+	"github.com/quar15/qq-go/internal/mode"
 	"github.com/quar15/qq-go/internal/motion"
+	"github.com/quar15/qq-go/internal/setup"
 )
 
 func initialize() error {
@@ -37,7 +39,7 @@ func initialize() error {
 	return nil
 }
 
-func handleDropFiles(appAssets *assets.Assets, dg *database.DataGrid, eg *display.EditorGrid) {
+func handleDropFiles(appAssets *assets.Assets, editorCursor *cursor.Cursor, dg *database.DataGrid, eg *display.EditorGrid) {
 	if rl.IsFileDropped() {
 		droppedFilesPaths := rl.LoadDroppedFiles()
 		// @TODO: Extend to handle every file if tabs are added
@@ -55,9 +57,11 @@ func handleDropFiles(appAssets *assets.Assets, dg *database.DataGrid, eg *displa
 			} else {
 				*eg = *newEg
 				display.CursorEditor.Handler.Reset(display.CursorSpreadsheet)
-				display.CursorEditor.Position.MaxCol = 1
-				display.CursorEditor.Position.MaxRow = eg.Rows
+				editorCursor.Position.MaxCol = eg.MaxCol
+				editorCursor.Position.MaxColForRows = eg.Cols
+				editorCursor.Position.MaxRow = eg.Rows - 1
 				display.CursorEditor.Common.Logs.Channel <- fmt.Sprintf("Loaded sql file '%s'", droppedFilesPaths[0])
+				//editorCursor.Common.Logs.Channel <- fmt.Sprintf("Loaded sql file '%s'", droppedFilesPaths[0])
 			}
 		case ".csv":
 			slog.Info("Loaded csv file")
@@ -109,42 +113,64 @@ func handleQuery(appAssets *assets.Assets, cursor *display.Cursor, dg *database.
 	}
 }
 
-func testOutMotions(cursor *display.Cursor) {
+func initEditorCursor() *mode.Context {
+	motions := setup.EditorMotionSet()
+	parser := motion.NewParser(motions.Root())
 
-	// Initializing mode and motions
-	root := motion.NewTrie()
+	cur := cursor.New(cursor.TypeEditor)
 
-	root.Insert([]motion.Key{
-		{Code: motion.KeyRune, Rune: 'h'},
-	}, motion.MoveLeft{})
+	ctx := &mode.Context{
+		Cursor: cur,
+		Parser: parser,
+	}
 
-	root.Insert([]motion.Key{
-		{Code: motion.KeyRune, Rune: 'j'},
-	}, motion.MoveDown{})
+	return ctx
+}
 
-	root.Insert([]motion.Key{
-		{Code: motion.KeyRune, Rune: 'k'},
-	}, motion.MoveUp{})
+func initSpreadsheetCursor() *mode.Context {
+	motions := setup.SpreadsheetMotionSet()
+	parser := motion.NewParser(motions.Root())
 
-	root.Insert([]motion.Key{
-		{Code: motion.KeyRune, Rune: 'l'},
-	}, motion.MoveRight{})
+	cur := cursor.New(cursor.TypeSpreadsheet)
 
-	// Parsing motions
-	parser := motion.NewParser(root)
+	ctx := &mode.Context{
+		Cursor: cur,
+		Parser: parser,
+	}
+
+	return ctx
+}
+
+func initConnectionsCursor() *mode.Context {
+	motions := setup.ConnectionsMotionSet()
+	parser := motion.NewParser(motions.Root())
+
+	cur := cursor.New(cursor.TypeConnections)
+
+	ctx := &mode.Context{
+		Cursor: cur,
+		Parser: parser,
+	}
+
+	return ctx
+}
+
+func testOutMotions() {
+	ctx := initEditorCursor()
+	ctx.Cursor.Position.MaxRow = 2
 
 	// Fake input
 	input := []motion.Key{
+		{Code: motion.KeyRune, Rune: 'v'},
 		{Code: motion.KeyRune, Rune: '1'},
 		{Code: motion.KeyRune, Rune: '0'},
 		{Code: motion.KeyRune, Rune: 'j'},
+		{Code: motion.KeyRune, Rune: 'k'},
 	}
 
 	for _, k := range input {
-		res := parser.Feed(k)
-		if res.Done && res.Valid {
-			cursor.Position = res.Motion.Apply(cursor.Position, res.Count)
-		}
+		mode.HandleKey(ctx, k)
+		fmt.Printf("%+v\n", ctx.Cursor.Position)
 	}
 }
 
@@ -187,13 +213,19 @@ func main() {
 	var commandZone display.Zone
 	var connectionsZone display.Zone
 
+	// @TODO: Get rid of old cursors
 	display.CursorEditor.Handler.Init(display.CursorEditor, &topZone)
 	display.CursorSpreadsheet.Handler.Init(display.CursorSpreadsheet, &bottomZone)
 	display.CursorConnection.Handler.Init(display.CursorConnection, &connectionsZone)
 	display.CursorConnection.Position.MaxRow = int32(connMgr.GetNumberOfConnections()) - 1
 	display.CurrCursor = display.CursorEditor
 	display.CurrCursor.SetActive(true)
-	testOutMotions(display.CurrCursor)
+
+	editorCursorCtx := initEditorCursor()
+	editorCursorCtx.Cursor.Activate()
+	//spreadsheetCursorCtx := initSpreadsheetCursor()
+	//connectionsCursorCtx := initConnectionsCursor()
+	testOutMotions()
 
 	topZone.ContentSize = rl.Vector2{X: 1600, Y: 1200}
 	bottomZone.ContentSize = rl.Vector2{X: 2000, Y: 2000}
@@ -221,16 +253,16 @@ func main() {
 		topZone.UpdateZoneScroll()
 		bottomZone.UpdateZoneScroll()
 
-		handleDropFiles(&appAssets, &dg, &eg)
+		handleDropFiles(&appAssets, editorCursorCtx.Cursor, &dg, &eg)
 		handleQuery(&appAssets, display.CurrCursor, &dg, connMgr)
-		display.CurrCursor.Handler.HandleInput(&appAssets, &dg, &eg, display.CurrCursor, connMgr)
+		display.HandleInput(editorCursorCtx)
 
 		// --- Drawing ---
 		rl.BeginDrawing()
 		rl.ClearBackground(cfg.Colors.Background())
 
 		editorIsFocused := (display.CurrCursor.Type == cursor.TypeEditor)
-		topZone.DrawEditor(&appAssets, &eg, display.CursorEditor, editorIsFocused)
+		topZone.DrawEditor(&appAssets, &eg, editorCursorCtx.Cursor, editorIsFocused)
 		bottomZone.DrawSpreadsheetZone(&appAssets, &dg, display.CursorSpreadsheet)
 		commandZone.DrawCommandZone(&appAssets, display.CurrCursor, connMgr.GetCurrentConnectionName())
 

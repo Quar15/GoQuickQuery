@@ -1,5 +1,5 @@
 package motion
 
 type Motion interface {
-	Apply(pos CursorPosition, count int) CursorPosition
+	Apply(pos CursorPosition, count int, hasCount bool) CursorPosition
 }

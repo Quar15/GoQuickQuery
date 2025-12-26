@@ -1,10 +1,11 @@
 package motion
 
 type Result struct {
-	Motion Motion
-	Count  int
-	Done   bool
-	Valid  bool
+	Motion   Motion
+	Count    int
+	HasCount bool
+	Done     bool
+	Valid    bool
 }
 
 type Parser struct {
@@ -25,6 +26,11 @@ func (p *Parser) Reset() {
 	p.count = 0
 }
 
+func (p *Parser) ResetWith(newRoot *TrieNode) {
+	p.current = newRoot
+	p.count = 0
+}
+
 func (p *Parser) Feed(k Key) Result {
 	if k.Code == KeyRune && k.Rune >= '0' && k.Rune <= '9' {
 		p.count = p.count*10 + int(k.Rune-'0')
@@ -41,16 +47,19 @@ func (p *Parser) Feed(k Key) Result {
 
 	if next.Motion != nil {
 		c := p.count
+		hasCount := true
 		if c == 0 {
 			c = 1
+			hasCount = false
 		}
 		m := next.Motion
 		p.Reset()
 		return Result{
-			Motion: m,
-			Count:  c,
-			Done:   true,
-			Valid:  true,
+			Motion:   m,
+			Count:    c,
+			HasCount: hasCount,
+			Done:     true,
+			Valid:    true,
 		}
 	}
 

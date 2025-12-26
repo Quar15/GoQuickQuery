@@ -20,4 +20,5 @@ func (t *TrieNode) Insert(keys []Key, m Motion) {
 		node = node.Children[k]
 	}
 	node.Motion = m
+	// slog.Debug("Inserted motion into Trie", slog.String("motion", fmt.Sprintf("%T", m)))
 }

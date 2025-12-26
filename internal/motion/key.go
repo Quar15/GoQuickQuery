@@ -6,6 +6,7 @@ const (
 	KeyRune KeyCode = iota
 	KeyEsc
 	KeyEnter
+	KeyArrow
 )
 
 type Modifiers uint8

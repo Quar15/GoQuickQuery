@@ -2,7 +2,6 @@ package cursor
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/quar15/qq-go/internal/editor"
@@ -202,7 +201,7 @@ func (c *Cursor) DetectQuery(eg *editor.Grid) (string, error) {
 	}
 	if query == "" {
 		errMsg := "No query provided/found"
-		return "", fmt.Errorf(errMsg)
+		return "", errors.New(errMsg)
 	}
 
 	return query, nil

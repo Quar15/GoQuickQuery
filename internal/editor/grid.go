@@ -51,8 +51,8 @@ type Grid struct {
 	MaxWidth  float32
 }
 
-func NewGrid() Grid {
-	return Grid{
+func NewGrid() *Grid {
+	return &Grid{
 		Text:      []string{},
 		Rows:      0,
 		Cols:      []int32{0},

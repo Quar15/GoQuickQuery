@@ -26,14 +26,14 @@ import (
 
 // App holds all application state and dependencies.
 type App struct {
-	cfg       *config.Config
-	assets    *assets.Assets
-	connMgr   *database.ConnectionManager
-	dataGrid  *database.DataGrid
-	editGrid  *editor.Grid
-	splitter  *display.Splitter
-	zones     *zones
-	cursors   *cursors
+	cfg      *config.Config
+	assets   *assets.Assets
+	connMgr  *database.ConnectionManager
+	dataGrid *database.DataGrid
+	editGrid *editor.Grid
+	splitter *display.Splitter
+	zones    *zones
+	cursors  *cursors
 }
 
 type zones struct {
@@ -62,11 +62,11 @@ func run() error {
 
 	cfg, err := config.Load()
 	if err != nil {
-		return fmt.Errorf("load config: %w", err)
+		return fmt.Errorf("Load config: %w", err)
 	}
 
 	if err := clipboard.Init(); err != nil {
-		return fmt.Errorf("init clipboard: %w", err)
+		return fmt.Errorf("Init clipboard: %w", err)
 	}
 
 	// Initialize color mappings
@@ -101,7 +101,7 @@ func newApp(cfg *config.Config) *App {
 		cfg:      cfg,
 		connMgr:  connMgr,
 		dataGrid: dg,
-		editGrid: &eg,
+		editGrid: eg,
 		splitter: &display.Splitter{
 			Ratio:    0.6,
 			Height:   6.0,
@@ -110,7 +110,7 @@ func newApp(cfg *config.Config) *App {
 		zones: &zones{},
 		cursors: &cursors{
 			common:      cursorCommon,
-			editor:      initEditorContext(cursorCommon, connMgr, &eg),
+			editor:      initEditorContext(cursorCommon, connMgr, eg),
 			spreadsheet: initSpreadsheetContext(cursorCommon),
 			connections: initConnectionsContext(cursorCommon),
 		},
@@ -130,15 +130,13 @@ func (a *App) close() {
 }
 
 func (a *App) run() error {
-    a.initWindow()
+	a.initWindow()
 
 	appAssets := &assets.Assets{}
 	if err := appAssets.LoadAssets(); err != nil {
 		return fmt.Errorf("load assets: %w", err)
 	}
 	a.assets = appAssets
-
-	a.initZones()
 
 	commandZoneHeight := appAssets.MainFontSize*2 + appAssets.MainFontSpacing*2
 	rl.SetTargetFPS(60)
@@ -158,13 +156,6 @@ func (a *App) initWindow() {
 	rl.SetConfigFlags(rl.FlagWindowResizable)
 	rl.InitWindow(int32(screenWidth), int32(screenHeight), "GQQ")
 	rl.SetExitKey(rl.KeyNull)
-}
-
-func (a *App) initZones() {
-	a.zones.top.ContentSize = rl.Vector2{X: 1920, Y: 540}
-	a.zones.bottom.ContentSize = rl.Vector2{X: 1920, Y: 540}
-	a.zones.command.ContentSize = rl.Vector2{X: 0, Y: 0}
-	a.zones.connections.ContentSize = rl.Vector2{X: 0, Y: 0}
 }
 
 func (a *App) update(commandZoneHeight float32) {
@@ -363,3 +354,4 @@ func initConnectionsContext(common *cursor.Common) *mode.Context {
 		Parser: parser,
 	}
 }
+

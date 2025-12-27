@@ -9,14 +9,6 @@ import (
 	"github.com/quar15/qq-go/internal/motion"
 )
 
-const keySmallG int = 103
-const keySmallH int = 104
-const keySmallJ int = 106
-const keySmallK int = 107
-const keySmallL int = 108
-const keySmallV int = 118
-const keySmallW int = 119
-
 func HandleInput(ctx *mode.Context) {
 	var (
 		keyCharPressed int32          = rl.GetCharPressed()

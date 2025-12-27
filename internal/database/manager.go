@@ -17,7 +17,7 @@ type ConnectionManager struct {
 
 func NewConnectionManager(connConfigs []ConnectionData, factory ConnectionFactory) *ConnectionManager {
 	mgr := &ConnectionManager{
-		connections: make(map[string]*ConnectionData),
+		connections: make(map[string]*ConnectionData, len(connConfigs)),
 		factory:     factory,
 	}
 
@@ -72,11 +72,21 @@ func (mgr *ConnectionManager) SetCurrentConnectionByName(name string) error {
 }
 
 func (mgr *ConnectionManager) GetCurrentConnectionName() string {
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
 	return mgr.current.Name
 }
 
 func (mgr *ConnectionManager) IsConnectionAlive(name string) bool {
-	connData := mgr.connections[name]
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+
+	connData, ok := mgr.connections[name]
+	if !ok {
+		slog.Error("Connection Manager asked about state of non-existing connection", slog.String("name", name))
+		return false
+	}
+
 	return connData.Conn != nil && connData.Conn.IsAlive()
 }
 
@@ -108,7 +118,7 @@ func (mgr *ConnectionManager) ExecuteQuery(ctx context.Context, connectionKey st
 	// Setup query timeout
 	if connData.QueryTimeout > 0 {
 		var cancelCtx context.CancelFunc
-		ctx, cancelCtx = context.WithTimeout(context.Background(), time.Duration(connData.QueryTimeout)*time.Second)
+		ctx, cancelCtx = context.WithTimeout(ctx, time.Duration(connData.QueryTimeout)*time.Second)
 		connData.ConnCtxCancel = cancelCtx
 	} else {
 		ctx = context.Background()

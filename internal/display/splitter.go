@@ -1,7 +1,7 @@
 package display
 
 import (
-	"github.com/gen2brain/raylib-go/raylib"
+	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/config"
 	"github.com/quar15/qq-go/internal/cursor"
 )

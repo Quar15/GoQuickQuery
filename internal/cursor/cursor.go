@@ -55,7 +55,7 @@ func (c *Cursor) TransitionMode(newMode Mode) {
 }
 
 func (c *Cursor) UpdateCmdLine() {
-	c.Common.Logs.Channel <- c.Common.CmdBuf
+	c.Common.Logs.Log(c.Common.CmdBuf)
 }
 
 func (c *Cursor) IsActive() bool {
@@ -190,6 +190,8 @@ func (c *Cursor) DetectQuery(eg *editor.Grid) (string, error) {
 	case ModeNormal:
 		start, end := eg.DetectQueryRowsBoundaryBasedOnRow(c.Position.Row)
 		var sb strings.Builder
+		sb.Grow(128)
+
 		for i := start; i <= end; i++ {
 			sb.WriteString(eg.Text[i])
 			if i < end {

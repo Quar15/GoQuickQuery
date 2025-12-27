@@ -207,7 +207,7 @@ func (a *App) draw() {
 	editorIsFocused := a.cursors.editor.Cursor.IsActive()
 	a.zones.top.DrawEditor(a.assets, a.editGrid, a.cursors.editor.Cursor, editorIsFocused)
 	a.zones.bottom.DrawSpreadsheetZone(a.assets, a.dataGrid, a.cursors.spreadsheet.Cursor)
-	a.zones.command.DrawCommandZone(a.assets, a.cursors.editor.Cursor, a.connMgr.GetCurrentConnectionName())
+	a.zones.command.DrawCommandZone(a.cfg, a.assets, a.cursors.editor.Cursor, a.connMgr.GetCurrentConnectionName())
 
 	a.splitter.Draw(a.cursors.editor.Cursor.Type)
 
@@ -249,7 +249,7 @@ func (a *App) loadSQLFile(path string) {
 	newEg, err := editor.LoadGridFromTextFile(path, a.assets)
 	if err != nil {
 		slog.Error("Failed to load file", slog.String("path", path))
-		a.cursors.editor.Cursor.Common.Logs.Channel <- fmt.Sprintf("ERR: Failed to parse sql file '%s'", path)
+		a.cursors.editor.Cursor.Common.Logs.Log(fmt.Sprintf("ERR: Failed to parse sql file '%s'", path))
 		return
 	}
 
@@ -259,7 +259,7 @@ func (a *App) loadSQLFile(path string) {
 	cur.Position.MaxCol = a.editGrid.MaxCol
 	cur.Position.MaxColForRows = a.editGrid.Cols
 	cur.Position.MaxRow = a.editGrid.Rows - 1
-	cur.Common.Logs.Channel <- fmt.Sprintf("Loaded sql file '%s'", path)
+	cur.Common.Logs.Log(fmt.Sprintf("Loaded sql file '%s'", path))
 	slog.Info("Loaded sql file", slog.String("path", path))
 }
 
@@ -267,7 +267,7 @@ func (a *App) loadCSVFile(path string) {
 	newDg, err := database.LoadDataGridFromCSV(path, a.assets)
 	if err != nil {
 		slog.Error("Failed to load file", slog.String("path", path))
-		a.cursors.spreadsheet.Cursor.Common.Logs.Channel <- fmt.Sprintf("ERR: Failed to parse csv file '%s'", path)
+		a.cursors.spreadsheet.Cursor.Common.Logs.Log(fmt.Sprintf("ERR: Failed to parse csv file '%s'", path))
 		return
 	}
 
@@ -277,7 +277,7 @@ func (a *App) loadCSVFile(path string) {
 	cur := a.cursors.spreadsheet.Cursor
 	cur.Position.MaxCol = a.dataGrid.Cols - 1
 	cur.Position.MaxRow = a.dataGrid.Rows - 1
-	cur.Common.Logs.Channel <- fmt.Sprintf("Loaded csv file '%s'", path)
+	cur.Common.Logs.Log(fmt.Sprintf("Loaded csv file '%s'", path))
 	slog.Info("Loaded csv file", slog.String("path", path))
 }
 
@@ -295,11 +295,11 @@ func (a *App) handleQueryResults() {
 		case err != nil:
 			slog.Error("Something went wrong during query", slog.Any("error", err))
 			connData.Conn = nil
-			logs.Channel <- fmt.Sprintf("'%s' cancelled after %s", connData.QueryText, runtime)
+			logs.Log(fmt.Sprintf("'%s' cancelled after %s", connData.QueryText, runtime))
 
 		case done && newDg == nil:
 			slog.Debug("Query finished with nil result", slog.String("query", connData.QueryText))
-			logs.Channel <- fmt.Sprintf("'%s' failed after %s", connData.QueryText, runtime)
+			logs.Log(fmt.Sprintf("'%s' failed after %s", connData.QueryText, runtime))
 
 		case done:
 			slog.Debug("Query finished", slog.String("query", connData.QueryText))
@@ -310,10 +310,10 @@ func (a *App) handleQueryResults() {
 			a.cursors.editor.Cursor.Reset()
 			a.cursors.spreadsheet.Cursor.Position.MaxCol = a.dataGrid.Cols
 			a.cursors.spreadsheet.Cursor.Position.MaxRow = a.dataGrid.Rows
-			logs.Channel <- fmt.Sprintf("'%s' finished after %s and returned %d result(s)", connData.QueryText, runtime, a.dataGrid.Rows)
+			logs.Log(fmt.Sprintf("'%s' finished after %s and returned %d result(s)", connData.QueryText, runtime, a.dataGrid.Rows))
 
 		default:
-			logs.Channel <- fmt.Sprintf("'%s' running for %s", connData.QueryText, runtime)
+			logs.Log(fmt.Sprintf("'%s' running for %s", connData.QueryText, runtime))
 		}
 	}
 }
@@ -354,4 +354,3 @@ func initConnectionsContext(common *cursor.Common) *mode.Context {
 		Parser: parser,
 	}
 }
-

@@ -28,6 +28,8 @@ func CountDigits(n int) int {
 
 func GetValueAsString(val any) string {
 	switch val := val.(type) {
+	case nil:
+		return ""
 	case string:
 		return val
 	case []byte:
@@ -47,7 +49,8 @@ func GetValueAsString(val any) string {
 			return "<invalid json>"
 		}
 		return string(b)
+	default:
+		slog.Error("Unhandled type while formatting", slog.Any("type", fmt.Sprintf("%T", val)))
+		return fmt.Sprintf("%v", val)
 	}
-	slog.Error("Unhandled type while formatting", slog.Any("type", fmt.Sprintf("%T", val)))
-	return fmt.Sprintf("%v", val)
 }

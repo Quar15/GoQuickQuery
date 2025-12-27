@@ -1,5 +1,7 @@
 package cursor
 
+import "log/slog"
+
 type CommandLogs struct {
 	Channel     chan string
 	LastMessage string
@@ -14,5 +16,14 @@ func (cl *CommandLogs) CheckForMessage() {
 	case msg := <-cl.Channel:
 		cl.LastMessage = msg
 	default:
+	}
+}
+
+func (cl *CommandLogs) Log(msg string) {
+	select {
+	case cl.Channel <- msg:
+	default:
+		// Drop message if channel full
+		slog.Warn("Log channel full, dropping message")
 	}
 }

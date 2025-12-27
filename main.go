@@ -86,7 +86,7 @@ func handleDropFiles(appAssets *assets.Assets, editorCursor *cursor.Cursor, spre
 
 func handleQuery(appAssets *assets.Assets, cursor *cursor.Cursor, spreadsheetCursor *cursor.Cursor, dg *database.DataGrid, connManager *database.ConnectionManager) {
 	for _, connData := range connManager.GetAllConnections() {
-		if connData.Conn == nil || connData.ConnCtx == nil || connData.QueryChannel == nil {
+		if connData.Conn == nil || connData.ConnCtxDone == nil || connData.QueryChannel == nil {
 			continue
 		}
 		newDg, done, err := connData.CheckForQueryResult()
@@ -94,7 +94,7 @@ func handleQuery(appAssets *assets.Assets, cursor *cursor.Cursor, spreadsheetCur
 			slog.Error("Something went wrong during query", slog.Any("error", err))
 			connData.Conn = nil
 			cursor.Common.Logs.Channel <- fmt.Sprintf("'%s' cancelled after %s", connData.QueryText, connData.GetQueryRuntimeDynamicString())
-		} else if done == true {
+		} else if done {
 			slog.Debug("Query finished", slog.String("query", connData.QueryText), slog.Any("dg", newDg), slog.Any("error", err))
 			if newDg == nil {
 				cursor.Common.Logs.Channel <- fmt.Sprintf("'%s' failed after %s", connData.QueryText, connData.GetQueryRuntimeDynamicString())
@@ -172,6 +172,8 @@ func main() {
 	}
 	connMgr := database.NewConnectionManager(cfg.Connections, &database.DefaultConnectionFactory{})
 	defer connMgr.Close(context.Background())
+	editor.InitHighlightColors(cfg)
+	cursor.InitModeColors(cfg)
 
 	var dg database.DataGrid
 	var eg editor.Grid = editor.NewGrid()
@@ -233,8 +235,8 @@ func main() {
 		bottomZone.UpdateZoneScroll()
 
 		handleDropFiles(&appAssets, editorCursorCtx.Cursor, spreadsheetCursorCtx.Cursor, &dg, &eg)
-		handleQuery(&appAssets, editorCursorCtx.Cursor, spreadsheetCursorCtx.Cursor, &dg, connMgr)
 		display.HandleInput(editorCursorCtx)
+		handleQuery(&appAssets, editorCursorCtx.Cursor, spreadsheetCursorCtx.Cursor, &dg, connMgr)
 
 		// --- Drawing ---
 		rl.BeginDrawing()

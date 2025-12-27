@@ -24,7 +24,7 @@ type ConnectionData struct {
 	ConnString          string             `yaml:"conn"`
 	QueryTimeout        int                `yaml:"timeout"`
 	Conn                DBConnection       `yaml:"-"`
-	ConnCtx             *context.Context   `yaml:"-"`
+	ConnCtxDone         <-chan struct{}    `yaml:"-"`
 	ConnCtxCancel       context.CancelFunc `yaml:"-"`
 	QueryChannel        chan queryResult   `yaml:"-"`
 	QueryText           string             `yaml:"-"`
@@ -32,13 +32,12 @@ type ConnectionData struct {
 }
 
 func (c *ConnectionData) CheckForQueryResult() (dg *DataGrid, done bool, err error) {
-	ctx := *c.ConnCtx
 	ch := c.QueryChannel
 	dg = &DataGrid{}
 	select {
 	// Check if query timed out
-	case <-ctx.Done():
-		slog.Warn("Timeout:", slog.Any("error", ctx.Err()))
+	case <-c.ConnCtxDone:
+		slog.Warn("Connection context done", slog.String("error", "Timeout reached"))
 		c.ClearConn()
 		return nil, true, fmt.Errorf("Timeout reached | Cancelled query")
 	// Check if query finished
@@ -69,7 +68,7 @@ func (c *ConnectionData) ClearConn() {
 
 func (c *ConnectionData) ClearQuery() {
 	c.QueryChannel = nil
-	c.ConnCtx = nil
+	c.ConnCtxDone = nil
 	c.ConnCtxCancel = nil
 }
 

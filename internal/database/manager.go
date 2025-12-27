@@ -85,7 +85,7 @@ func (mgr *ConnectionManager) ExecuteQuery(ctx context.Context, connectionKey st
 	// Find conn in map
 	mgr.mu.Lock()
 	connData, ok := mgr.connections[connectionKey]
-	mgr.mu.Unlock()
+	defer mgr.mu.Unlock()
 	if !ok {
 		return fmt.Errorf("No connection '%s' found", connectionKey)
 	}
@@ -120,11 +120,9 @@ func (mgr *ConnectionManager) ExecuteQuery(ctx context.Context, connectionKey st
 		connData.ClearConn()
 		return err
 	}
-	mgr.mu.Lock()
-	connData.ConnCtx = &ctx
+	connData.ConnCtxDone = ctx.Done()
 	connData.QueryChannel = ch
-	connData.QueryStartTimestamp = time.Time.UnixMilli(time.Now())
-	mgr.mu.Unlock()
+	connData.QueryStartTimestamp = time.Now().UnixMilli()
 	slog.Debug("Query started", slog.String("query", query))
 
 	return nil

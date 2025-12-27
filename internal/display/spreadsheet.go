@@ -6,11 +6,12 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
 	"github.com/quar15/qq-go/internal/config"
+	"github.com/quar15/qq-go/internal/cursor"
 	"github.com/quar15/qq-go/internal/database"
 	"github.com/quar15/qq-go/internal/format"
 )
 
-func (z *Zone) DrawSpreadsheetZone(appAssets *assets.Assets, dg *database.DataGrid, cursor *Cursor) {
+func (z *Zone) DrawSpreadsheetZone(appAssets *assets.Assets, dg *database.DataGrid, cursor *cursor.Cursor) {
 	// @TODO: Consider approach with RenderTexture2D for performance
 	const cellHeight int = 30
 	const textPadding int32 = 6
@@ -49,7 +50,7 @@ func (z *Zone) DrawSpreadsheetZone(appAssets *assets.Assets, dg *database.DataGr
 	z.drawScrollbars()
 }
 
-func renderContentRow(z *Zone, appAssets *assets.Assets, dg *database.DataGrid, cursor *Cursor, counterColumnWidth int, cellHeight int, textPadding int32, mouse rl.Vector2, row int32) {
+func renderContentRow(z *Zone, appAssets *assets.Assets, dg *database.DataGrid, cursor *cursor.Cursor, counterColumnWidth int, cellHeight int, textPadding int32, mouse rl.Vector2, row int32) {
 	for col, key := range dg.Headers {
 		// @TODO: Consider limiting draw to only visible columns
 		val := dg.Data[row][key]
@@ -132,7 +133,7 @@ func renderSpreadsheetHeadersRow(z *Zone, appAssets *assets.Assets, dg *database
 	}
 }
 
-func updateSpreadsheetScrollBasedOnCursor(z *Zone, dg *database.DataGrid, cursor *Cursor, cellHeight int, linesPadding int8) (scrollRow int32, lastRowToRender int32) {
+func updateSpreadsheetScrollBasedOnCursor(z *Zone, dg *database.DataGrid, cursor *cursor.Cursor, cellHeight int, linesPadding int8) (scrollRow int32, lastRowToRender int32) {
 	z.Scroll.X = 0
 	for col := int32(0); col < cursor.Position.Col; col++ {
 		z.Scroll.X += float32(dg.ColumnsWidth[col])

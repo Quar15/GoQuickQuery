@@ -1,4 +1,4 @@
-package display
+package editor
 
 import (
 	"bufio"
@@ -43,7 +43,7 @@ func (hc HighlightColorEnum) Color() rl.Color {
 	return highlightColor[hc]
 }
 
-type EditorGrid struct {
+type Grid struct {
 	Text      []string
 	Rows      int32
 	Cols      []int32
@@ -52,8 +52,8 @@ type EditorGrid struct {
 	MaxWidth  float32
 }
 
-func NewEditorGrid() EditorGrid {
-	return EditorGrid{
+func NewGrid() Grid {
+	return Grid{
 		Text:      []string{},
 		Rows:      0,
 		Cols:      []int32{0},
@@ -63,7 +63,7 @@ func NewEditorGrid() EditorGrid {
 	}
 }
 
-func (eg *EditorGrid) UpdateHighlight(fromRow int32, toRow int32) {
+func (eg *Grid) UpdateHighlight(fromRow int32, toRow int32) {
 	for row := fromRow; row <= toRow; row++ {
 		if eg.Cols[row] == 0 {
 			eg.Highlight[row] = nil
@@ -156,7 +156,7 @@ func (eg *EditorGrid) UpdateHighlight(fromRow int32, toRow int32) {
 	}
 }
 
-func (eg *EditorGrid) FakeInit(appAssets *assets.Assets) {
+func (eg *Grid) FakeInit(appAssets *assets.Assets) {
 	eg.Text = []string{
 		"SELECT * FROM example LIMIT 500;",
 		"",
@@ -183,8 +183,8 @@ func (eg *EditorGrid) FakeInit(appAssets *assets.Assets) {
 	eg.UpdateHighlight(0, eg.Rows-1)
 }
 
-func LoadEditorGridFromTextFile(path string, appAssets *assets.Assets) (*EditorGrid, error) {
-	var eg *EditorGrid = &EditorGrid{}
+func LoadGridFromTextFile(path string, appAssets *assets.Assets) (*Grid, error) {
+	var eg *Grid = &Grid{}
 
 	f, err := os.Open(path)
 	if err != nil {
@@ -234,7 +234,7 @@ func LoadEditorGridFromTextFile(path string, appAssets *assets.Assets) (*EditorG
 	return eg, nil
 }
 
-func (eg *EditorGrid) DetectQueryRowsBoundaryBasedOnRow(row int32) (start int32, end int32) {
+func (eg *Grid) DetectQueryRowsBoundaryBasedOnRow(row int32) (start int32, end int32) {
 	start = row
 	end = row
 

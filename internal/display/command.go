@@ -9,7 +9,7 @@ import (
 	"github.com/quar15/qq-go/internal/cursor"
 )
 
-func (z *Zone) DrawCommandZone(appAssets *assets.Assets, c *Cursor, currConnName string) {
+func (z *Zone) DrawCommandZone(appAssets *assets.Assets, c *cursor.Cursor, currConnName string) {
 	const textSpacing float32 = 4
 	var statusLineColor rl.Color = c.Common.Mode.Color()
 	// Status Line

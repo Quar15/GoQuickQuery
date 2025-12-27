@@ -4,6 +4,8 @@ import (
 	"log/slog"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"github.com/quar15/qq-go/internal/mode"
+	"github.com/quar15/qq-go/internal/mode/commands"
 	"github.com/quar15/qq-go/internal/motion"
 )
 
@@ -13,7 +15,7 @@ const keySmallJ rune = 106
 const keySmallK rune = 107
 const keySmallL rune = 108
 
-func EditorMotionSet() *motion.Set {
+func baseMotionSet() *motion.Set {
 	s := motion.NewSet()
 	s.AddRune(keySmallH, motion.MoveLeft{})
 	s.AddRune(keySmallJ, motion.MoveDown{})
@@ -32,13 +34,27 @@ func EditorMotionSet() *motion.Set {
 		{Code: motion.KeyRune, Rune: keySmallG},
 	}, motion.MoveStartUp{})
 
-	slog.Debug("Initialized editor motion set", slog.Any("setTrie", s.Root()))
 	return s
 }
 
-func SpreadsheetMotionSet() *motion.Set {
-	// same as editor for now
-	return EditorMotionSet()
+func EditorMotionSet() (*motion.Set, *mode.CommandRegistry) {
+	s := baseMotionSet()
+	commandRegistry := mode.NewCommandRegistry()
+	commandRegistry.Bind(
+		motion.Key{Code: motion.KeyRune, Rune: rl.KeyEnter, Modifiers: motion.ModCtrl},
+		commands.ExecuteSQLCommand{},
+	)
+
+	slog.Debug("Initialized editor motion set", slog.Any("setTrie", s.Root()))
+	return s, commandRegistry
+}
+
+func SpreadsheetMotionSet() (*motion.Set, *mode.CommandRegistry) {
+	s := baseMotionSet()
+	commandRegistry := mode.NewCommandRegistry()
+
+	slog.Debug("Initialized spreadsheet motion set", slog.Any("setTrie", s.Root()))
+	return s, commandRegistry
 }
 
 func ConnectionsMotionSet() *motion.Set {

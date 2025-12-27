@@ -17,6 +17,7 @@ import (
 	"github.com/quar15/qq-go/internal/cursor"
 	"github.com/quar15/qq-go/internal/database"
 	"github.com/quar15/qq-go/internal/display"
+	"github.com/quar15/qq-go/internal/editor"
 	"github.com/quar15/qq-go/internal/format"
 	"github.com/quar15/qq-go/internal/mode"
 	"github.com/quar15/qq-go/internal/motion"
@@ -39,7 +40,7 @@ func initialize() error {
 	return nil
 }
 
-func handleDropFiles(appAssets *assets.Assets, editorCursor *cursor.Cursor, dg *database.DataGrid, eg *display.EditorGrid) {
+func handleDropFiles(appAssets *assets.Assets, editorCursor *cursor.Cursor, spreadsheetCursor *cursor.Cursor, dg *database.DataGrid, eg *editor.Grid) {
 	if rl.IsFileDropped() {
 		droppedFilesPaths := rl.LoadDroppedFiles()
 		// @TODO: Extend to handle every file if tabs are added
@@ -50,17 +51,17 @@ func handleDropFiles(appAssets *assets.Assets, editorCursor *cursor.Cursor, dg *
 		switch ext {
 		case ".sql":
 			slog.Info("Loaded sql file")
-			newEg, err := display.LoadEditorGridFromTextFile(droppedFilesPaths[0], appAssets)
+			newEg, err := editor.LoadGridFromTextFile(droppedFilesPaths[0], appAssets)
 			if err != nil {
 				slog.Error("Failed to load file", slog.Any("path", droppedFilesPaths[0]))
-				display.CursorEditor.Common.Logs.Channel <- fmt.Sprintf("ERR: Failed to parse sql file '%s'", droppedFilesPaths[0])
+				editorCursor.Common.Logs.Channel <- fmt.Sprintf("ERR: Failed to parse sql file '%s'", droppedFilesPaths[0])
 			} else {
 				*eg = *newEg
-				display.CursorEditor.Handler.Reset(display.CursorSpreadsheet)
+				editorCursor.Reset()
 				editorCursor.Position.MaxCol = eg.MaxCol
 				editorCursor.Position.MaxColForRows = eg.Cols
 				editorCursor.Position.MaxRow = eg.Rows - 1
-				display.CursorEditor.Common.Logs.Channel <- fmt.Sprintf("Loaded sql file '%s'", droppedFilesPaths[0])
+				editorCursor.Common.Logs.Channel <- fmt.Sprintf("Loaded sql file '%s'", droppedFilesPaths[0])
 				//editorCursor.Common.Logs.Channel <- fmt.Sprintf("Loaded sql file '%s'", droppedFilesPaths[0])
 			}
 		case ".csv":
@@ -68,14 +69,14 @@ func handleDropFiles(appAssets *assets.Assets, editorCursor *cursor.Cursor, dg *
 			newDg, err := database.LoadDataGridFromCSV(droppedFilesPaths[0], appAssets)
 			if err != nil {
 				slog.Error("Failed to load file", slog.Any("path", droppedFilesPaths[0]))
-				display.CursorSpreadsheet.Common.Logs.Channel <- fmt.Sprintf("ERR: Failed to parse csv file '%s'", droppedFilesPaths[0])
+				spreadsheetCursor.Common.Logs.Channel <- fmt.Sprintf("ERR: Failed to parse csv file '%s'", droppedFilesPaths[0])
 			} else {
 				*dg = *newDg
 				dg.UpdateColumnsWidth(appAssets)
-				display.CursorSpreadsheet.Handler.Reset(display.CursorSpreadsheet)
-				display.CursorSpreadsheet.Position.MaxCol = dg.Cols - 1
-				display.CursorSpreadsheet.Position.MaxRow = dg.Rows - 1
-				display.CursorSpreadsheet.Common.Logs.Channel <- fmt.Sprintf("Loaded csv file '%s'", droppedFilesPaths[0])
+				//display.CursorSpreadsheet.Handler.Reset(display.CursorSpreadsheet)
+				spreadsheetCursor.Position.MaxCol = dg.Cols - 1
+				spreadsheetCursor.Position.MaxRow = dg.Rows - 1
+				spreadsheetCursor.Common.Logs.Channel <- fmt.Sprintf("Loaded csv file '%s'", droppedFilesPaths[0])
 			}
 		default:
 			slog.Warn("Unhandled type of file", slog.String("extension", ext))
@@ -83,7 +84,7 @@ func handleDropFiles(appAssets *assets.Assets, editorCursor *cursor.Cursor, dg *
 	}
 }
 
-func handleQuery(appAssets *assets.Assets, cursor *display.Cursor, dg *database.DataGrid, connManager *database.ConnectionManager) {
+func handleQuery(appAssets *assets.Assets, cursor *cursor.Cursor, spreadsheetCursor *cursor.Cursor, dg *database.DataGrid, connManager *database.ConnectionManager) {
 	for _, connData := range connManager.GetAllConnections() {
 		if connData.Conn == nil || connData.ConnCtx == nil || connData.QueryChannel == nil {
 			continue
@@ -101,9 +102,9 @@ func handleQuery(appAssets *assets.Assets, cursor *display.Cursor, dg *database.
 				*dg = *newDg
 				dg.UpdateColumnsWidth(appAssets)
 				format.PrintMap(dg.Data)
-				cursor.Handler.Reset(cursor)
-				display.CursorSpreadsheet.Position.MaxCol = dg.Cols
-				display.CursorSpreadsheet.Position.MaxRow = dg.Rows
+				cursor.Reset()
+				spreadsheetCursor.Position.MaxCol = dg.Cols
+				spreadsheetCursor.Position.MaxRow = dg.Rows
 				cursor.Common.Logs.Channel <- fmt.Sprintf("'%s' finished after %s and returned %d result(s)", connData.QueryText, connData.GetQueryRuntimeDynamicString(), dg.Rows)
 				// @TODO: Add system notification for query finish
 			}
@@ -113,39 +114,43 @@ func handleQuery(appAssets *assets.Assets, cursor *display.Cursor, dg *database.
 	}
 }
 
-func initEditorCursor() *mode.Context {
-	motions := setup.EditorMotionSet()
+func initEditorCursor(common *cursor.Common, connManager *database.ConnectionManager, eg *editor.Grid) *mode.Context {
+	motions, commandRegistry := setup.EditorMotionSet()
 	parser := motion.NewParser(motions.Root())
 
-	cur := cursor.New(cursor.TypeEditor)
+	cur := cursor.New(common, cursor.TypeEditor)
 
 	ctx := &mode.Context{
-		Cursor: cur,
-		Parser: parser,
+		Cursor:      cur,
+		Parser:      parser,
+		Commands:    commandRegistry,
+		ConnManager: connManager,
+		EditorGrid:  eg,
 	}
 
 	return ctx
 }
 
-func initSpreadsheetCursor() *mode.Context {
-	motions := setup.SpreadsheetMotionSet()
+func initSpreadsheetCursor(common *cursor.Common) *mode.Context {
+	motions, commandRegistry := setup.SpreadsheetMotionSet()
 	parser := motion.NewParser(motions.Root())
 
-	cur := cursor.New(cursor.TypeSpreadsheet)
+	cur := cursor.New(common, cursor.TypeSpreadsheet)
 
 	ctx := &mode.Context{
-		Cursor: cur,
-		Parser: parser,
+		Cursor:   cur,
+		Parser:   parser,
+		Commands: commandRegistry,
 	}
 
 	return ctx
 }
 
-func initConnectionsCursor() *mode.Context {
+func initConnectionsCursor(common *cursor.Common) *mode.Context {
 	motions := setup.ConnectionsMotionSet()
 	parser := motion.NewParser(motions.Root())
 
-	cur := cursor.New(cursor.TypeConnections)
+	cur := cursor.New(common, cursor.TypeConnections)
 
 	ctx := &mode.Context{
 		Cursor: cur,
@@ -153,25 +158,6 @@ func initConnectionsCursor() *mode.Context {
 	}
 
 	return ctx
-}
-
-func testOutMotions() {
-	ctx := initEditorCursor()
-	ctx.Cursor.Position.MaxRow = 2
-
-	// Fake input
-	input := []motion.Key{
-		{Code: motion.KeyRune, Rune: 'v'},
-		{Code: motion.KeyRune, Rune: '1'},
-		{Code: motion.KeyRune, Rune: '0'},
-		{Code: motion.KeyRune, Rune: 'j'},
-		{Code: motion.KeyRune, Rune: 'k'},
-	}
-
-	for _, k := range input {
-		mode.HandleKey(ctx, k)
-		fmt.Printf("%+v\n", ctx.Cursor.Position)
-	}
 }
 
 func main() {
@@ -186,6 +172,9 @@ func main() {
 	}
 	connMgr := database.NewConnectionManager(cfg.Connections, &database.DefaultConnectionFactory{})
 	defer connMgr.Close(context.Background())
+
+	var dg database.DataGrid
+	var eg editor.Grid = editor.NewGrid()
 
 	// --- Init Window ---
 	var screenWidth int = rl.GetScreenWidth()
@@ -213,28 +202,18 @@ func main() {
 	var commandZone display.Zone
 	var connectionsZone display.Zone
 
-	// @TODO: Get rid of old cursors
-	display.CursorEditor.Handler.Init(display.CursorEditor, &topZone)
-	display.CursorSpreadsheet.Handler.Init(display.CursorSpreadsheet, &bottomZone)
-	display.CursorConnection.Handler.Init(display.CursorConnection, &connectionsZone)
-	display.CursorConnection.Position.MaxRow = int32(connMgr.GetNumberOfConnections()) - 1
-	display.CurrCursor = display.CursorEditor
-	display.CurrCursor.SetActive(true)
-
-	editorCursorCtx := initEditorCursor()
+	cursorCommon := &cursor.Common{}
+	cursorCommon.Logs.Init()
+	editorCursorCtx := initEditorCursor(cursorCommon, connMgr, &eg)
 	editorCursorCtx.Cursor.Activate()
-	//spreadsheetCursorCtx := initSpreadsheetCursor()
-	//connectionsCursorCtx := initConnectionsCursor()
-	testOutMotions()
+	spreadsheetCursorCtx := initSpreadsheetCursor(cursorCommon)
+	connectionsCursorCtx := initConnectionsCursor(cursorCommon)
 
-	topZone.ContentSize = rl.Vector2{X: 1600, Y: 1200}
-	bottomZone.ContentSize = rl.Vector2{X: 2000, Y: 2000}
+	topZone.ContentSize = rl.Vector2{X: 1920, Y: 540}
+	bottomZone.ContentSize = rl.Vector2{X: 1920, Y: 540}
 	commandZone.ContentSize = rl.Vector2{X: 0, Y: 0}
 	connectionsZone.ContentSize = rl.Vector2{X: 0, Y: 0}
 	var commandZoneHeight float32 = (appAssets.MainFontSize*2 + appAssets.MainFontSpacing*2)
-
-	var dg database.DataGrid
-	var eg display.EditorGrid = display.NewEditorGrid()
 
 	rl.SetTargetFPS(60)
 
@@ -253,23 +232,23 @@ func main() {
 		topZone.UpdateZoneScroll()
 		bottomZone.UpdateZoneScroll()
 
-		handleDropFiles(&appAssets, editorCursorCtx.Cursor, &dg, &eg)
-		handleQuery(&appAssets, display.CurrCursor, &dg, connMgr)
+		handleDropFiles(&appAssets, editorCursorCtx.Cursor, spreadsheetCursorCtx.Cursor, &dg, &eg)
+		handleQuery(&appAssets, editorCursorCtx.Cursor, spreadsheetCursorCtx.Cursor, &dg, connMgr)
 		display.HandleInput(editorCursorCtx)
 
 		// --- Drawing ---
 		rl.BeginDrawing()
 		rl.ClearBackground(cfg.Colors.Background())
 
-		editorIsFocused := (display.CurrCursor.Type == cursor.TypeEditor)
+		editorIsFocused := editorCursorCtx.Cursor.IsActive()
 		topZone.DrawEditor(&appAssets, &eg, editorCursorCtx.Cursor, editorIsFocused)
-		bottomZone.DrawSpreadsheetZone(&appAssets, &dg, display.CursorSpreadsheet)
-		commandZone.DrawCommandZone(&appAssets, display.CurrCursor, connMgr.GetCurrentConnectionName())
+		bottomZone.DrawSpreadsheetZone(&appAssets, &dg, spreadsheetCursorCtx.Cursor)
+		commandZone.DrawCommandZone(&appAssets, editorCursorCtx.Cursor, connMgr.GetCurrentConnectionName())
 
-		splitter.Draw()
+		splitter.Draw(editorCursorCtx.Cursor.Type)
 
-		if display.CurrCursor.Type == cursor.TypeConnections {
-			connectionsZone.DrawConnectionSelector(&appAssets, cfg, display.CursorConnection, int32(screenWidth), int32(screenHeight), connMgr)
+		if connectionsCursorCtx.Cursor.IsActive() {
+			connectionsZone.DrawConnectionSelector(&appAssets, cfg, connectionsCursorCtx.Cursor, int32(screenWidth), int32(screenHeight), connMgr)
 		}
 
 		rl.EndDrawing()

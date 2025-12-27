@@ -4,10 +4,11 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
 	"github.com/quar15/qq-go/internal/config"
+	"github.com/quar15/qq-go/internal/cursor"
 	"github.com/quar15/qq-go/internal/database"
 )
 
-func (z *Zone) DrawConnectionSelector(appAssets *assets.Assets, config *config.Config, cursor *Cursor, screenWidth int32, screenHeight int32, connManager *database.ConnectionManager) {
+func (z *Zone) DrawConnectionSelector(appAssets *assets.Assets, config *config.Config, cursor *cursor.Cursor, screenWidth int32, screenHeight int32, connManager *database.ConnectionManager) {
 	const boxWidth = 300
 	const maxVisibleConnections int = 5
 	const textPadding int32 = 6

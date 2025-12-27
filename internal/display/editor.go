@@ -7,10 +7,11 @@ import (
 	"github.com/quar15/qq-go/internal/assets"
 	"github.com/quar15/qq-go/internal/config"
 	"github.com/quar15/qq-go/internal/cursor"
+	"github.com/quar15/qq-go/internal/editor"
 	"github.com/quar15/qq-go/internal/format"
 )
 
-func (z *Zone) DrawEditor(appAssets *assets.Assets, eg *EditorGrid, cursor *cursor.Cursor, shouldDrawCursor bool) {
+func (z *Zone) DrawEditor(appAssets *assets.Assets, eg *editor.Grid, cursor *cursor.Cursor, shouldDrawCursor bool) {
 	if eg.Rows <= 0 {
 		return
 	}
@@ -46,7 +47,7 @@ func (z *Zone) DrawEditor(appAssets *assets.Assets, eg *EditorGrid, cursor *curs
 	z.drawScrollbars()
 }
 
-func renderEditorTextRow(z *Zone, appAssets *assets.Assets, eg *EditorGrid, cursor *cursor.Cursor, counterColumnWidth int, cellHeight int, rowsInitialPadding int32, textPadding int32, row int32) {
+func renderEditorTextRow(z *Zone, appAssets *assets.Assets, eg *editor.Grid, cursor *cursor.Cursor, counterColumnWidth int, cellHeight int, rowsInitialPadding int32, textPadding int32, row int32) {
 	var cellY float32 = z.Bounds.Y + float32(row*int32(cellHeight)) - z.Scroll.Y + float32(rowsInitialPadding)
 	if eg.Highlight[row] != nil {
 		for col := range eg.Text[row] {
@@ -74,7 +75,7 @@ func renderEditorTextRow(z *Zone, appAssets *assets.Assets, eg *EditorGrid, curs
 	}
 }
 
-func renderEditorDetectedQueryOutline(z *Zone, appAssets *assets.Assets, eg *EditorGrid, cursor *cursor.Cursor, counterColumnWidth int, cellHeight int, rowsInitialPadding int32, textPadding int32) {
+func renderEditorDetectedQueryOutline(z *Zone, appAssets *assets.Assets, eg *editor.Grid, cursor *cursor.Cursor, counterColumnWidth int, cellHeight int, rowsInitialPadding int32, textPadding int32) {
 	start, end := eg.DetectQueryRowsBoundaryBasedOnRow(cursor.Position.Row)
 	outlineRect := rl.Rectangle{
 		X:      z.Bounds.X + float32(counterColumnWidth),
@@ -101,7 +102,7 @@ func renderEditorRowCounter(z *Zone, appAssets *assets.Assets, counterColumnChar
 	appAssets.DrawTextMainFont(strconv.Itoa(int(row+1)), rl.Vector2{X: cellX, Y: cellY}, config.Get().Colors.Overlay0())
 }
 
-func renderEditorCursor(z *Zone, appAssets *assets.Assets, eg *EditorGrid, cursor *cursor.Cursor, counterColumnWidth int, cellHeight int, rowsInitialPadding int32, textPadding int32) {
+func renderEditorCursor(z *Zone, appAssets *assets.Assets, eg *editor.Grid, cursor *cursor.Cursor, counterColumnWidth int, cellHeight int, rowsInitialPadding int32, textPadding int32) {
 	var cellY float32 = z.Bounds.Y + float32(cursor.Position.Row*int32(cellHeight)) - z.Scroll.Y + float32(rowsInitialPadding)
 	var cellX float32 = z.Bounds.X + float32(counterColumnWidth) + float32(textPadding)
 	if eg.Cols[cursor.Position.Row] > 0 {

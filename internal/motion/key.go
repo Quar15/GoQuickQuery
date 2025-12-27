@@ -1,5 +1,7 @@
 package motion
 
+import rl "github.com/gen2brain/raylib-go/raylib"
+
 type KeyCode int
 
 const (
@@ -20,3 +22,5 @@ type Key struct {
 	Rune      rune
 	Modifiers Modifiers
 }
+
+var CtrlW Key = Key{Code: KeyRune, Rune: rl.KeyW, Modifiers: ModCtrl}

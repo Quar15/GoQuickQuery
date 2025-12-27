@@ -38,11 +38,11 @@ func (splitter *Splitter) HandleZoneSplit(screenWidth int, screenHeight int, com
 	}
 }
 
-func (splitter *Splitter) Draw() {
+func (splitter *Splitter) Draw(currCursorType cursor.Type) {
 	var defaultColor rl.Color = config.Get().Colors.Crust()
 	var focusColor rl.Color = config.Get().Colors.Accent()
 	rl.DrawRectangleRec(splitter.Rect, defaultColor)
-	switch CurrCursor.Type {
+	switch currCursorType {
 	case cursor.TypeEditor:
 		var newRect rl.Rectangle = splitter.Rect
 		newRect.Width /= 2

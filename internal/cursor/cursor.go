@@ -1,6 +1,12 @@
 package cursor
 
-import "github.com/quar15/qq-go/internal/motion"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/quar15/qq-go/internal/editor"
+	"github.com/quar15/qq-go/internal/motion"
+)
 
 type Common struct {
 	Mode      Mode
@@ -24,13 +30,32 @@ type Cursor struct {
 	isActive bool
 }
 
-func New(cursorType Type) *Cursor {
-	return &Cursor{
-		Common:   &Common{},
+func New(common *Common, cursorType Type) *Cursor {
+	c := &Cursor{
+		Common:   common,
 		Position: motion.CursorPosition{},
 		Type:     cursorType,
 		isActive: false,
 	}
+	c.Common.Logs.Init()
+
+	return c
+}
+
+func (c *Cursor) Reset() {
+	c.TransitionMode(ModeNormal)
+	c.Position.ResetSelect()
+	c.Common.CmdBuf = ""
+	c.Common.MotionBuf = ""
+	c.UpdateCmdLine()
+}
+
+func (c *Cursor) TransitionMode(newMode Mode) {
+	c.Common.Mode = newMode
+}
+
+func (c *Cursor) UpdateCmdLine() {
+	c.Common.Logs.Channel <- c.Common.CmdBuf
 }
 
 func (c *Cursor) IsActive() bool {
@@ -85,6 +110,10 @@ func (c *Cursor) UpdateSelectBasedOnPosition() {
 	}
 }
 
+func (c *Cursor) IsFocused(col int32, row int32) bool {
+	return c.Position.Col == col && c.Position.Row == row
+}
+
 func (c *Cursor) IsSelected(col int32, row int32) bool {
 	switch c.Common.Mode {
 	case ModeVisual:
@@ -128,4 +157,52 @@ func (c *Cursor) IsSelected(col int32, row int32) bool {
 	}
 
 	return false
+}
+
+func (c *Cursor) DetectQuery(eg *editor.Grid) (string, error) {
+	query := ""
+	if eg.Rows <= 0 {
+		errMsg := "No query provided"
+		return "", fmt.Errorf(errMsg)
+	}
+	// @TODO: Implement other modes behavior
+	switch c.Common.Mode {
+	case ModeVisual:
+		for row := c.Position.SelectStartRow; row <= c.Position.SelectEndRow; row++ {
+			if eg.Cols[row] > 0 {
+				for col := int32(0); col < eg.Cols[row]; col++ {
+					if c.IsSelected(col, row) {
+						query += string(eg.Text[row][col])
+					}
+				}
+			}
+		}
+	case ModeVLine:
+		for row := c.Position.SelectStartRow; row <= c.Position.SelectEndRow; row++ {
+			if eg.Cols[row] > 0 {
+				for col := int32(0); col < eg.Cols[row]; col++ {
+					query += string(eg.Text[row][col])
+				}
+			}
+		}
+	case ModeInsert:
+		fallthrough
+	case ModeNormal:
+		start, end := eg.DetectQueryRowsBoundaryBasedOnRow(c.Position.Row)
+		var sb strings.Builder
+		for i := start; i <= end; i++ {
+			sb.WriteString(eg.Text[i])
+			if i < end {
+				sb.WriteString(" ")
+			}
+		}
+
+		query = strings.TrimSpace(sb.String())
+	}
+	if query == "" {
+		errMsg := "No query provided/found"
+		return "", fmt.Errorf(errMsg)
+	}
+
+	return query, nil
 }

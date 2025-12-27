@@ -165,7 +165,7 @@ func (c *ColorsConfig) MergeDefaults() {
 		c.VisualMode.Color = mauve
 	}
 	if c.CommandMode.Color == defaultColor {
-		c.CommandMode.Color = blue
+		c.CommandMode.Color = peach
 	}
 }
 

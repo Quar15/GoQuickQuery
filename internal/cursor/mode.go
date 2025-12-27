@@ -16,15 +16,17 @@ const (
 	ModeVLine
 	ModeVBlock
 	ModeCommand
+	ModeWindowManagement
 )
 
 var modeName = map[Mode]string{
-	ModeNormal:  "NORMAL",
-	ModeInsert:  "INSERT",
-	ModeVisual:  "VISUAL",
-	ModeVLine:   "V-LINE",
-	ModeVBlock:  "V-BLOCK",
-	ModeCommand: "COMMAND",
+	ModeNormal:           "NORMAL",
+	ModeInsert:           "INSERT",
+	ModeVisual:           "VISUAL",
+	ModeVLine:            "V-LINE",
+	ModeVBlock:           "V-BLOCK",
+	ModeCommand:          "COMMAND",
+	ModeWindowManagement: "WINDOW",
 }
 
 func (cm Mode) String() string {
@@ -37,12 +39,13 @@ var modeColor = map[Mode]rl.Color{}
 func (cm Mode) Color() rl.Color {
 	setupColorOnce.Do(func() {
 		modeColor = map[Mode]rl.Color{
-			ModeNormal:  config.Get().Colors.NormalMode(),
-			ModeInsert:  config.Get().Colors.InsertMode(),
-			ModeVisual:  config.Get().Colors.VisualMode(),
-			ModeVLine:   config.Get().Colors.VisualMode(),
-			ModeVBlock:  config.Get().Colors.VisualMode(),
-			ModeCommand: config.Get().Colors.NormalMode(),
+			ModeNormal:           config.Get().Colors.NormalMode(),
+			ModeInsert:           config.Get().Colors.InsertMode(),
+			ModeVisual:           config.Get().Colors.VisualMode(),
+			ModeVLine:            config.Get().Colors.VisualMode(),
+			ModeVBlock:           config.Get().Colors.VisualMode(),
+			ModeCommand:          config.Get().Colors.CommandMode(),
+			ModeWindowManagement: config.Get().Colors.CommandMode(),
 		}
 	})
 	return modeColor[cm]

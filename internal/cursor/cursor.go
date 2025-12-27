@@ -1,6 +1,7 @@
 package cursor
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -163,7 +164,7 @@ func (c *Cursor) DetectQuery(eg *editor.Grid) (string, error) {
 	query := ""
 	if eg.Rows <= 0 {
 		errMsg := "No query provided"
-		return "", fmt.Errorf(errMsg)
+		return "", errors.New(errMsg)
 	}
 	// @TODO: Implement other modes behavior
 	switch c.Common.Mode {

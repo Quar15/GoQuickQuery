@@ -3,6 +3,7 @@ package editor
 import (
 	"bufio"
 	"errors"
+	"io"
 	"os"
 	"strings"
 	"sync"
@@ -197,13 +198,12 @@ func LoadGridFromTextFile(path string, appAssets *assets.Assets) (*Grid, error) 
 	eg.Rows = 0
 	eg.MaxWidth = 0
 	eg.Highlight = make([][]HighlightColorEnum, 0, 256)
-	var eof bool = false
 	var maxCol int32 = 0
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil {
-			if err.Error() == "EOF" {
-				eof = true
+			if errors.Is(err, io.EOF) {
+				break
 			} else {
 				return nil, errors.New("Failed to parse provided file")
 			}
@@ -223,10 +223,6 @@ func LoadGridFromTextFile(path string, appAssets *assets.Assets) (*Grid, error) 
 			eg.Highlight = append(eg.Highlight, make([]HighlightColorEnum, lineLen))
 		} else {
 			eg.Highlight = append(eg.Highlight, nil)
-		}
-
-		if eof {
-			break
 		}
 	}
 

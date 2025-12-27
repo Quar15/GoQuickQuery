@@ -50,7 +50,6 @@ func handleDropFiles(appAssets *assets.Assets, editorCursor *cursor.Cursor, spre
 		ext := filepath.Ext(droppedFilesPaths[0])
 		switch ext {
 		case ".sql":
-			slog.Info("Loaded sql file")
 			newEg, err := editor.LoadGridFromTextFile(droppedFilesPaths[0], appAssets)
 			if err != nil {
 				slog.Error("Failed to load file", slog.Any("path", droppedFilesPaths[0]))
@@ -62,6 +61,7 @@ func handleDropFiles(appAssets *assets.Assets, editorCursor *cursor.Cursor, spre
 				editorCursor.Position.MaxColForRows = eg.Cols
 				editorCursor.Position.MaxRow = eg.Rows - 1
 				editorCursor.Common.Logs.Channel <- fmt.Sprintf("Loaded sql file '%s'", droppedFilesPaths[0])
+				slog.Info("Loaded sql file", slog.String("path", droppedFilesPaths[0]))
 				//editorCursor.Common.Logs.Channel <- fmt.Sprintf("Loaded sql file '%s'", droppedFilesPaths[0])
 			}
 		case ".csv":

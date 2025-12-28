@@ -25,6 +25,9 @@ func HandleInput(ctx *mode.Context) {
 	} else if keyPressed == rl.KeyEscape || keyPressed == rl.KeyCapsLock {
 		code = motion.KeyEsc
 		keyCharPressed = keyPressed
+	} else if keyPressed == rl.KeyEnter {
+		code = motion.KeyEnter
+		keyCharPressed = keyPressed
 	}
 
 	switch {

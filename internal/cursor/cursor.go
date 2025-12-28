@@ -23,6 +23,16 @@ const (
 	TypeConnections
 )
 
+var typeName = map[Type]string{
+	TypeEditor:      "TypeEditor",
+	TypeSpreadsheet: "TypeSpreadsheet",
+	TypeConnections: "TypeConnections",
+}
+
+func (t Type) String() string {
+	return typeName[t]
+}
+
 type Cursor struct {
 	Common   *Common
 	Position motion.CursorPosition

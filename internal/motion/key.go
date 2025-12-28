@@ -24,3 +24,4 @@ type Key struct {
 }
 
 var CtrlW Key = Key{Code: KeyRune, Rune: rl.KeyW, Modifiers: ModCtrl}
+var CtrlE Key = Key{Code: KeyRune, Rune: rl.KeyE, Modifiers: ModCtrl}

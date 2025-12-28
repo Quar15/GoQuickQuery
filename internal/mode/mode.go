@@ -14,16 +14,26 @@ type Handler interface {
 }
 
 type Context struct {
-	Cursor      *cursor.Cursor
-	Parser      *motion.Parser
-	Commands    *CommandRegistry
-	ConnManager *database.ConnectionManager
-	EditorGrid  *editor.Grid
+	Cursor        *cursor.Cursor
+	Parser        *motion.Parser
+	Commands      *CommandRegistry
+	ConnManager   *database.ConnectionManager
+	WindowManager *WindowManager
+	EditorGrid    *editor.Grid
 }
 
 func HandleKey(ctx *Context, k motion.Key) {
-	if k == motion.CtrlW {
+	switch k {
+	case motion.CtrlW:
 		ctx.Cursor.TransitionMode(cursor.ModeWindowManagement)
+		return
+	case motion.CtrlE:
+		ctx.Cursor.TransitionMode(cursor.ModeNormal)
+		if ctx.Cursor.Type != cursor.TypeConnections {
+			ctx.WindowManager.ChangeWindow(cursor.TypeConnections)
+		} else {
+			ctx.WindowManager.ChangeWindow(cursor.TypeEditor)
+		}
 		return
 	}
 

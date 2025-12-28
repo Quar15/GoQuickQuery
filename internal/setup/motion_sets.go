@@ -39,27 +39,42 @@ func baseMotionSet() *motion.Set {
 
 func EditorMotionSet() (*motion.Set, *mode.CommandRegistry) {
 	s := baseMotionSet()
-	commandRegistry := mode.NewCommandRegistry()
-	commandRegistry.Bind(
-		motion.Key{Code: motion.KeyRune, Rune: rl.KeyEnter, Modifiers: motion.ModCtrl},
+	cr := mode.NewCommandRegistry()
+	cr.Bind(
+		motion.Key{Code: motion.KeyEnter, Rune: rl.KeyEnter, Modifiers: motion.ModCtrl},
 		commands.ExecuteSQLCommand{},
 	)
 
 	slog.Debug("Initialized editor motion set", slog.Any("setTrie", s.Root()))
-	return s, commandRegistry
+	return s, cr
 }
 
 func SpreadsheetMotionSet() (*motion.Set, *mode.CommandRegistry) {
 	s := baseMotionSet()
-	commandRegistry := mode.NewCommandRegistry()
+	cr := mode.NewCommandRegistry()
 
 	slog.Debug("Initialized spreadsheet motion set", slog.Any("setTrie", s.Root()))
-	return s, commandRegistry
+	return s, cr
 }
 
-func ConnectionsMotionSet() *motion.Set {
+func ConnectionsMotionSet() (*motion.Set, *mode.CommandRegistry) {
 	s := motion.NewSet()
 	s.AddRune('j', motion.MoveDown{})
 	s.AddRune('k', motion.MoveUp{})
-	return s
+
+	s.AddArrow(rl.KeyDown, motion.MoveDown{})
+	s.AddArrow(rl.KeyUp, motion.MoveUp{})
+
+	s.AddRune(rl.KeyG, motion.MoveEndDown{})
+	s.AddRune(rl.KeyG, motion.MoveToSpecificLineOrDown{})
+	s.Add([]motion.Key{
+		{Code: motion.KeyRune, Rune: keySmallG},
+		{Code: motion.KeyRune, Rune: keySmallG},
+	}, motion.MoveStartUp{})
+
+	cr := mode.NewCommandRegistry()
+	cr.Bind(motion.Key{Code: motion.KeyEnter, Rune: rl.KeyEnter}, commands.ConnectionsChange{})
+
+	slog.Debug("Initialized connections motion set", slog.Any("setTrie", s.Root()))
+	return s, cr
 }

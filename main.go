@@ -26,14 +26,15 @@ import (
 
 // App holds all application state and dependencies.
 type App struct {
-	cfg      *config.Config
-	assets   *assets.Assets
-	connMgr  *database.ConnectionManager
-	dataGrid *database.DataGrid
-	editGrid *editor.Grid
-	splitter *display.Splitter
-	zones    *zones
-	cursors  *cursors
+	cfg       *config.Config
+	assets    *assets.Assets
+	connMgr   *database.ConnectionManager
+	dataGrid  *database.DataGrid
+	editGrid  *editor.Grid
+	splitter  *display.Splitter
+	zones     *zones
+	cursors   *cursors
+	windowMgr *mode.WindowManager
 }
 
 type zones struct {
@@ -96,6 +97,14 @@ func newApp(cfg *config.Config) *App {
 
 	cursorCommon := &cursor.Common{}
 	cursorCommon.Logs.Init()
+	appCursors := &cursors{
+		common:      cursorCommon,
+		editor:      initEditorContext(cursorCommon, connMgr, eg),
+		spreadsheet: initSpreadsheetContext(cursorCommon, connMgr),
+		connections: initConnectionsContext(cursorCommon, connMgr),
+	}
+	appCursors.connections.Cursor.Position.MaxRow = int32(len(cfg.Connections) - 1)
+	windowMgr := appCursors.initWindowManager()
 
 	app := &App{
 		cfg:      cfg,
@@ -107,16 +116,10 @@ func newApp(cfg *config.Config) *App {
 			Height:   6.0,
 			Dragging: false,
 		},
-		zones: &zones{},
-		cursors: &cursors{
-			common:      cursorCommon,
-			editor:      initEditorContext(cursorCommon, connMgr, eg),
-			spreadsheet: initSpreadsheetContext(cursorCommon),
-			connections: initConnectionsContext(cursorCommon),
-		},
+		zones:     &zones{},
+		cursors:   appCursors,
+		windowMgr: windowMgr,
 	}
-
-	app.cursors.editor.Cursor.Activate()
 
 	return app
 }
@@ -171,7 +174,7 @@ func (a *App) update(commandZoneHeight float32) {
 	a.zones.bottom.UpdateZoneScroll()
 
 	a.handleDroppedFiles()
-	display.HandleInput(a.cursors.editor)
+	display.HandleInput(a.windowMgr.CurrCtx())
 	a.handleQueryResults()
 }
 
@@ -209,7 +212,7 @@ func (a *App) draw() {
 	a.zones.bottom.DrawSpreadsheetZone(a.assets, a.dataGrid, a.cursors.spreadsheet.Cursor)
 	a.zones.command.DrawCommandZone(a.cfg, a.assets, a.cursors.editor.Cursor, a.connMgr.GetCurrentConnectionName())
 
-	a.splitter.Draw(a.cursors.editor.Cursor.Type)
+	a.splitter.Draw(a.windowMgr.CurrCtx().Cursor.Type)
 
 	if a.cursors.connections.Cursor.IsActive() {
 		screenWidth := int32(rl.GetScreenWidth())
@@ -332,25 +335,36 @@ func initEditorContext(common *cursor.Common, connManager *database.ConnectionMa
 	}
 }
 
-func initSpreadsheetContext(common *cursor.Common) *mode.Context {
+func initSpreadsheetContext(common *cursor.Common, connManager *database.ConnectionManager) *mode.Context {
 	motions, commandRegistry := setup.SpreadsheetMotionSet()
 	parser := motion.NewParser(motions.Root())
 	cur := cursor.New(common, cursor.TypeSpreadsheet)
 
 	return &mode.Context{
-		Cursor:   cur,
-		Parser:   parser,
-		Commands: commandRegistry,
+		Cursor:      cur,
+		Parser:      parser,
+		Commands:    commandRegistry,
+		ConnManager: connManager,
 	}
 }
 
-func initConnectionsContext(common *cursor.Common) *mode.Context {
-	motions := setup.ConnectionsMotionSet()
+func initConnectionsContext(common *cursor.Common, connManager *database.ConnectionManager) *mode.Context {
+	motions, commandRegistry := setup.ConnectionsMotionSet()
 	parser := motion.NewParser(motions.Root())
 	cur := cursor.New(common, cursor.TypeConnections)
 
 	return &mode.Context{
-		Cursor: cur,
-		Parser: parser,
+		Cursor:      cur,
+		Parser:      parser,
+		Commands:    commandRegistry,
+		ConnManager: connManager,
 	}
+}
+
+func (c *cursors) initWindowManager() *mode.WindowManager {
+	wm := mode.InitWindowManager(c.editor, c.spreadsheet, c.connections)
+	c.editor.WindowManager = wm
+	c.spreadsheet.WindowManager = wm
+	c.connections.WindowManager = wm
+	return wm
 }

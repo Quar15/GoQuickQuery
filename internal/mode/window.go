@@ -68,6 +68,12 @@ func (WindowManagementMode) Handle(ctx *Context, k motion.Key) {
 	case 'w', 'n', 'p':
 		ctx.WindowManager.SwapWindow()
 		ctx.Cursor.TransitionMode(cursor.ModeNormal)
+	case 'k', rl.KeyUp:
+		ctx.WindowManager.ChangeWindow(cursor.TypeEditor)
+		ctx.Cursor.TransitionMode(cursor.ModeNormal)
+	case 'j', rl.KeyDown:
+		ctx.WindowManager.ChangeWindow(cursor.TypeSpreadsheet)
+		ctx.Cursor.TransitionMode(cursor.ModeNormal)
 	// @TODO: Window split management
 	case '=':
 	case '+':

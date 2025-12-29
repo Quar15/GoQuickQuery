@@ -9,6 +9,7 @@ const (
 	KeyEsc
 	KeyEnter
 	KeyArrow
+	KeySpecial
 )
 
 type Modifiers uint8

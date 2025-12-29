@@ -4,155 +4,42 @@ import (
 	"bufio"
 	"errors"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
+	"sync"
 
-	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/quar15/qq-go/internal/assets"
-	"github.com/quar15/qq-go/internal/config"
-	"github.com/quar15/qq-go/internal/database"
 )
-
-type HighlightColorEnum int8
-
-const (
-	HighlightKeyword HighlightColorEnum = iota
-	HighlightFunction
-	HighlightDatabaseVar // tablespaces, tables
-	HighlightText
-	HighlightNumber
-	HighlightNormal
-)
-
-var highlightColor = map[HighlightColorEnum]rl.Color{}
-
-func InitHighlightColors(cfg *config.Config) {
-	highlightColor = map[HighlightColorEnum]rl.Color{
-		// @TODO: Consider moving to color config
-		HighlightKeyword:     cfg.Colors.Mauve(),
-		HighlightFunction:    cfg.Colors.Blue(),
-		HighlightDatabaseVar: cfg.Colors.Yellow(),
-		HighlightText:        cfg.Colors.Green(),
-		HighlightNumber:      cfg.Colors.Peach(),
-		HighlightNormal:      cfg.Colors.Text(),
-	}
-}
-
-func (hc HighlightColorEnum) Color() rl.Color {
-	return highlightColor[hc]
-}
 
 type Grid struct {
+	mu        sync.RWMutex
 	Text      []string
 	Rows      int32
 	Cols      []int32
 	Highlight [][]HighlightColorEnum
 	MaxCol    int32
-	MaxWidth  float32
 }
 
 func NewGrid() *Grid {
+	highlight := make([][]HighlightColorEnum, 1)
+	highlight = append(highlight, make([]HighlightColorEnum, 0))
+
 	return &Grid{
-		Text:      []string{},
+		Text:      []string{""},
 		Rows:      0,
 		Cols:      []int32{0},
-		Highlight: [][]HighlightColorEnum{},
+		Highlight: highlight,
 		MaxCol:    0,
-		MaxWidth:  0,
 	}
 }
 
-func (eg *Grid) UpdateHighlight(fromRow int32, toRow int32) {
-	for row := fromRow; row <= toRow; row++ {
-		if eg.Cols[row] == 0 {
-			eg.Highlight[row] = nil
-			continue
-		}
+func (eg *Grid) Lock() {
+	eg.mu.Lock()
+}
 
-		if cap(eg.Highlight[row]) < int(eg.Cols[row]) {
-			eg.Highlight[row] = make([]HighlightColorEnum, eg.Cols[row])
-		} else {
-			eg.Highlight[row] = eg.Highlight[row][:eg.Cols[row]]
-		}
-
-		// @TODO: Highlight
-		for i := range eg.Highlight[row] {
-			eg.Highlight[row][i] = HighlightNormal
-		}
-
-		i := int32(0)
-		line := eg.Text[row]
-		for i < eg.Cols[row] {
-			c := line[i]
-			// Text
-			if c == '\'' {
-				eg.Highlight[row][i] = HighlightText
-				i++
-				for i < eg.Cols[row] {
-					eg.Highlight[row][i] = HighlightText
-					if line[i] == '\'' {
-						i++
-						break
-					}
-					i++
-				}
-			}
-
-			// DB Variables
-			if c == '"' {
-				eg.Highlight[row][i] = HighlightDatabaseVar
-				i++
-				for i < eg.Cols[row] {
-					eg.Highlight[row][i] = HighlightDatabaseVar
-					if line[i] == '"' {
-						i++
-						break
-					}
-					i++
-				}
-			}
-
-			// Digits
-			if isDigit(c) {
-				start := i
-				for i < eg.Cols[row] && isDigit(line[i]) {
-					i++
-				}
-				for j := start; j < i; j++ {
-					eg.Highlight[row][j] = HighlightNumber
-				}
-				continue
-			}
-
-			if isWordChar(c) {
-				start := i
-				for i < eg.Cols[row] && isWordChar(line[i]) {
-					i++
-				}
-
-				word := strings.ToLower(line[start:i])
-
-				var color HighlightColorEnum = HighlightNormal
-
-				if _, ok := database.SqlKeywords[word]; ok {
-					color = HighlightKeyword
-				} else if _, ok := database.PostgresqlFunctionsKeywords[word]; ok {
-					color = HighlightFunction
-				}
-
-				if color != HighlightNormal {
-					for j := start; j < i; j++ {
-						eg.Highlight[row][j] = color
-					}
-				}
-
-				continue
-			}
-
-			i++
-		}
-
-	}
+func (eg *Grid) Unlock() {
+	eg.mu.Unlock()
 }
 
 func (eg *Grid) FakeInit(appAssets *assets.Assets) {
@@ -170,7 +57,6 @@ func (eg *Grid) FakeInit(appAssets *assets.Assets) {
 		eg.Cols = append(eg.Cols, int32(lineLen))
 		if maxCol < lineLen {
 			maxCol = lineLen
-			eg.MaxWidth = appAssets.MeasureTextMainFont(eg.Text[row]).X
 		}
 
 		if lineLen > 0 {
@@ -194,7 +80,6 @@ func LoadGridFromTextFile(path string, appAssets *assets.Assets) (*Grid, error) 
 	reader := bufio.NewReader(f)
 	eg.Text = make([]string, 0, 256)
 	eg.Rows = 0
-	eg.MaxWidth = 0
 	eg.Highlight = make([][]HighlightColorEnum, 0, 256)
 	var maxCol int32 = 0
 	for {
@@ -214,7 +99,6 @@ func LoadGridFromTextFile(path string, appAssets *assets.Assets) (*Grid, error) 
 		if maxCol < lineLen {
 			maxCol = lineLen
 			eg.MaxCol = lineLen
-			eg.MaxWidth = appAssets.MeasureTextMainFont(line).X
 		}
 
 		if lineLen > 0 {
@@ -249,13 +133,101 @@ func (eg *Grid) DetectQueryRowsBoundaryBasedOnRow(row int32) (start int32, end i
 	return start, end
 }
 
-func isWordChar(c byte) bool {
-	return (c >= 'a' && c <= 'z') ||
-		(c >= 'A' && c <= 'Z') ||
-		(c >= '0' && c <= '9') ||
-		c == '_'
+func (eg *Grid) InsertChar(row, col int32, ch rune) int32 {
+	eg.mu.Lock()
+	defer eg.mu.Unlock()
+	line := eg.Text[row]
+	eg.Text[row] = line[:col] + string(ch) + line[col:]
+	eg.Cols[row]++
+	eg.UpdateHighlight(row, row)
+	eg.recalculateMaxCol(row)
+	return col + 1
 }
 
-func isDigit(c byte) bool {
-	return c >= '0' && c <= '9'
+func (eg *Grid) DeleteCharBefore(row, col int32) (newRow, newCol int32) {
+	eg.mu.Lock()
+	slog.Debug("Delecting character before", slog.Int("row", int(row)), slog.Int("col", int(col)))
+	defer eg.mu.Unlock()
+	if col > 0 {
+		line := eg.Text[row]
+		eg.Text[row] = line[:col-1] + line[col:]
+		eg.Cols[row]--
+
+		eg.UpdateHighlight(row, row)
+		eg.recalculateMaxCol(row)
+		return row, col - 1
+	}
+
+	if row > 0 {
+		newRow = row - 1
+		eg.joinLines(newRow)
+		newCol = eg.Cols[newRow] - 1
+		return newRow, newCol
+	}
+
+	return row, col
+}
+
+func (eg *Grid) joinLines(row int32) {
+	if row >= eg.Rows-1 {
+		return
+	}
+
+	nextRow := row + 1
+	eg.Text[row] = eg.Text[row] + eg.Text[nextRow]
+	eg.Cols[row] = int32(len(eg.Text[row]))
+
+	// Remove next line
+	eg.Text = append(eg.Text[:nextRow], eg.Text[nextRow+1:]...)
+	eg.Cols = append(eg.Cols[:nextRow], eg.Cols[nextRow+1:]...)
+	eg.Highlight = append(eg.Highlight[:nextRow], eg.Highlight[nextRow+1:]...)
+	eg.Rows--
+
+	eg.UpdateHighlight(row, row)
+	eg.recalculateMaxCol(row)
+}
+
+func (eg *Grid) InsertNewLine(row, col int32) (newRow, newCol int32) {
+	eg.mu.Lock()
+	defer eg.mu.Unlock()
+	line := eg.Text[row]
+	before := line[:col]
+	after := line[col:]
+
+	eg.Text[row] = before
+	eg.Cols[row] = int32(len(before))
+
+	newRowIdx := row + 1
+
+	eg.Text = append(eg.Text, "")
+	eg.Cols = append(eg.Cols, 0)
+	eg.Highlight = append(eg.Highlight, nil)
+
+	copy(eg.Text[newRowIdx+1:], eg.Text[newRowIdx:])
+	copy(eg.Cols[newRowIdx+1:], eg.Cols[newRowIdx:])
+	copy(eg.Highlight[newRowIdx+1:], eg.Highlight[newRowIdx:])
+
+	eg.Text[newRowIdx] = after
+	eg.Cols[newRowIdx] = int32(len(after))
+	eg.Highlight[newRowIdx] = nil
+
+	eg.Rows++
+	eg.UpdateHighlight(row, newRowIdx)
+	eg.recalculateMaxCol(row)
+
+	return newRowIdx, 0
+}
+
+func (eg *Grid) recalculateMaxCol(row int32) {
+	if eg.Cols[row] > eg.MaxCol {
+		eg.MaxCol = eg.Cols[row]
+		return
+	}
+
+	eg.MaxCol = row
+	for _, col := range eg.Cols {
+		if col > eg.MaxCol {
+			eg.MaxCol = col
+		}
+	}
 }

@@ -22,12 +22,18 @@ func HandleInput(ctx *mode.Context) {
 	if slices.Contains(arrowKeys, keyPressed) {
 		code = motion.KeyArrow
 		keyCharPressed = keyPressed
-	} else if keyPressed == rl.KeyEscape || keyPressed == rl.KeyCapsLock {
-		code = motion.KeyEsc
-		keyCharPressed = keyPressed
-	} else if keyPressed == rl.KeyEnter {
-		code = motion.KeyEnter
-		keyCharPressed = keyPressed
+	} else {
+		switch keyPressed {
+		case rl.KeyEscape, rl.KeyCapsLock:
+			code = motion.KeyEsc
+			keyCharPressed = keyPressed
+		case rl.KeyEnter:
+			code = motion.KeyEnter
+			keyCharPressed = keyPressed
+		case rl.KeyDelete, rl.KeyBackspace, rl.KeyTab:
+			code = motion.KeySpecial
+			keyCharPressed = keyPressed
+		}
 	}
 
 	switch {

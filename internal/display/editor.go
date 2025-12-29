@@ -39,6 +39,7 @@ func (z *Zone) DrawEditor(appAssets *assets.Assets, eg *editor.Grid, cursor *cur
 
 	rl.BeginScissorMode(int32(z.Bounds.X), int32(z.Bounds.Y), int32(z.Bounds.Width), int32(z.Bounds.Height))
 
+	eg.Lock()
 	for row := scrollRow; row <= lastRowToRender; row++ {
 		renderEditorTextRow(z, appAssets, eg, cursor, renderParams, row)
 	}
@@ -49,11 +50,12 @@ func (z *Zone) DrawEditor(appAssets *assets.Assets, eg *editor.Grid, cursor *cur
 	if shouldDrawCursor {
 		renderEditorCursor(z, appAssets, eg, cursor, renderParams)
 	}
+	eg.Unlock()
 
 	rl.EndScissorMode()
 
 	z.ContentSize.Y = max(float32(contentHeight), z.Bounds.Height)
-	z.ContentSize.X = max(eg.MaxWidth, z.Bounds.Width)
+	z.ContentSize.X = max(float32(eg.MaxCol)*appAssets.MainFontCharacterWidth, z.Bounds.Width)
 	z.drawScrollbars()
 }
 

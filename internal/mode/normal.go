@@ -15,22 +15,35 @@ func (NormalMode) Handle(ctx *Context, k motion.Key) {
 	switch k.Rune {
 	case rl.KeyEscape, rl.KeyCapsLock:
 		ctx.Parser.Reset()
+	case 'i':
+		ctx.Cursor.TransitionMode(cursor.ModeInsert)
+	case 'a':
+		if ctx.Cursor.Position.Col < ctx.EditorGrid.Cols[ctx.Cursor.Position.Row] {
+			ctx.Cursor.Position.Col++
+		}
+		ctx.Cursor.TransitionMode(cursor.ModeInsert)
+	case 'A':
+		ctx.Cursor.Position.Col = ctx.EditorGrid.Cols[ctx.Cursor.Position.Row]
+		ctx.Cursor.TransitionMode(cursor.ModeInsert)
+	case 'o':
+		ctx.Cursor.Position.Row, ctx.Cursor.Position.Col = ctx.EditorGrid.InsertNewLine(ctx.Cursor.Position.Row, ctx.Cursor.Position.Col)
+		ctx.Cursor.TransitionMode(cursor.ModeInsert)
 	case 'v':
 		ctx.Cursor.Position.AnchorSelect()
-		ctx.Cursor.Common.Mode = cursor.ModeVisual
+		ctx.Cursor.TransitionMode(cursor.ModeVisual)
 		ctx.Parser.Reset()
 		return
 	case 'V':
 		ctx.Cursor.Position.AnchorSelect()
 		if k.Modifiers == motion.ModCtrl {
-			ctx.Cursor.Common.Mode = cursor.ModeVBlock
+			ctx.Cursor.TransitionMode(cursor.ModeVBlock)
 		} else {
-			ctx.Cursor.Common.Mode = cursor.ModeVLine
+			ctx.Cursor.TransitionMode(cursor.ModeVLine)
 		}
 		ctx.Parser.Reset()
 		return
 	case ':':
-		ctx.Cursor.Common.Mode = cursor.ModeCommand
+		ctx.Cursor.TransitionMode(cursor.ModeCommand)
 		ctx.Parser.Reset()
 		return
 	}

@@ -37,9 +37,18 @@ func baseMotionSet() *motion.Set {
 	return s
 }
 
+func baseCommandRegistry() *mode.CommandRegistry {
+	cr := mode.NewCommandRegistry()
+
+	cr.Bind(motion.Key{Code: motion.KeyRune, Rune: 'E', Modifiers: motion.ModCtrl}, commands.ConnectionsSwap{})
+	cr.Bind(motion.Key{Code: motion.KeyRune, Rune: 'W', Modifiers: motion.ModCtrl}, mode.WindowManagementModeActivate{})
+
+	return cr
+}
+
 func EditorMotionSet() (*motion.Set, *mode.CommandRegistry) {
 	s := baseMotionSet()
-	cr := mode.NewCommandRegistry()
+	cr := baseCommandRegistry()
 	cr.Bind(
 		motion.Key{Code: motion.KeyEnter, Rune: rl.KeyEnter, Modifiers: motion.ModCtrl},
 		commands.ExecuteSQLCommand{},
@@ -51,7 +60,7 @@ func EditorMotionSet() (*motion.Set, *mode.CommandRegistry) {
 
 func SpreadsheetMotionSet() (*motion.Set, *mode.CommandRegistry) {
 	s := baseMotionSet()
-	cr := mode.NewCommandRegistry()
+	cr := baseCommandRegistry()
 
 	slog.Debug("Initialized spreadsheet motion set", slog.Any("setTrie", s.Root()))
 	return s, cr
@@ -72,9 +81,11 @@ func ConnectionsMotionSet() (*motion.Set, *mode.CommandRegistry) {
 		{Code: motion.KeyRune, Rune: keySmallG},
 	}, motion.MoveStartUp{})
 
-	cr := mode.NewCommandRegistry()
+	cr := baseCommandRegistry()
 	cr.Bind(motion.Key{Code: motion.KeyEnter, Rune: rl.KeyEnter}, commands.ConnectionsChange{})
+	cr.Bind(motion.Key{Code: motion.KeyEsc, Rune: rl.KeyEscape}, commands.ConnectionsExit{})
+	cr.Bind(motion.Key{Code: motion.KeyEsc, Rune: rl.KeyCapsLock}, commands.ConnectionsExit{})
 
-	slog.Debug("Initialized connections motion set", slog.Any("setTrie", s.Root()))
+	slog.Debug("Initialized connections motion set", slog.Any("setTrie", s.Root()), slog.Any("cr", cr))
 	return s, cr
 }

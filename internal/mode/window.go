@@ -80,3 +80,10 @@ func (WindowManagementMode) Handle(ctx *Context, k motion.Key) {
 	case '-':
 	}
 }
+
+type WindowManagementModeActivate struct{}
+
+func (WindowManagementModeActivate) Execute(ctx *Context) error {
+	ctx.Cursor.TransitionMode(cursor.ModeWindowManagement)
+	return nil
+}

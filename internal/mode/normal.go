@@ -22,12 +22,19 @@ func (NormalMode) Handle(ctx *Context, k motion.Key) {
 			ctx.Cursor.Position.Col++
 		}
 		ctx.Cursor.TransitionMode(cursor.ModeInsert)
+		ctx.UpdateCursorPositionMax()
 	case 'A':
 		ctx.Cursor.Position.Col = ctx.EditorGrid.Cols[ctx.Cursor.Position.Row]
 		ctx.Cursor.TransitionMode(cursor.ModeInsert)
-	case 'o':
-		ctx.Cursor.Position.Row, ctx.Cursor.Position.Col = ctx.EditorGrid.InsertNewLine(ctx.Cursor.Position.Row, ctx.Cursor.Position.Col)
+		ctx.UpdateCursorPositionMax()
+	case 'O':
+		ctx.Cursor.Position.Row, ctx.Cursor.Position.Col = ctx.EditorGrid.InsertEmptyLineAbove(ctx.Cursor.Position.Row)
 		ctx.Cursor.TransitionMode(cursor.ModeInsert)
+		ctx.UpdateCursorPositionMax()
+	case 'o':
+		ctx.Cursor.Position.Row, ctx.Cursor.Position.Col = ctx.EditorGrid.InsertEmptyLineBelow(ctx.Cursor.Position.Row)
+		ctx.Cursor.TransitionMode(cursor.ModeInsert)
+		ctx.UpdateCursorPositionMax()
 	case 'v':
 		ctx.Cursor.Position.AnchorSelect()
 		ctx.Cursor.TransitionMode(cursor.ModeVisual)

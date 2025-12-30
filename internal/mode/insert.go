@@ -11,12 +11,16 @@ import (
 type InsertMode struct{}
 
 func (InsertMode) Handle(ctx *Context, k motion.Key) {
-	if k.Code == motion.KeyEsc {
-		ctx.Cursor.Common.Mode = cursor.ModeNormal
-		return
-	}
 	row := ctx.Cursor.Position.Row
 	col := ctx.Cursor.Position.Col
+
+	if k.Code == motion.KeyEsc {
+		ctx.UpdateCursorPositionMax()
+		ctx.Cursor.Position.Col = max(col-1, 0)
+		ctx.Cursor.TransitionMode(cursor.ModeNormal)
+
+		return
+	}
 
 	switch k.Rune {
 	case rl.KeyEnter:
@@ -26,9 +30,13 @@ func (InsertMode) Handle(ctx *Context, k motion.Key) {
 		ctx.Cursor.Position.Row, ctx.Cursor.Position.Col = ctx.EditorGrid.DeleteCharBefore(row, col)
 	case rl.KeyLeft, rl.KeyDown, rl.KeyUp, rl.KeyRight:
 	default:
-		slog.Debug("Inserting character", slog.Any("Rune", k.Rune))
-		ctx.Cursor.Position.Col = ctx.EditorGrid.InsertChar(row, col, k.Rune)
+		if k.Rune > 31 && k.Rune < 127 {
+			slog.Debug("Inserting character", slog.Any("Rune", k.Rune), slog.String("string(Rune)", string(k.Rune)))
+			ctx.Cursor.Position.Col = ctx.EditorGrid.InsertChar(row, col, k.Rune)
+		} else {
+			slog.Debug("SKIP Inserting character", slog.Any("Rune", k.Rune), slog.String("string(Rune)", string(k.Rune)))
+		}
 	}
 
-	ctx.Cursor.Position.MaxRow = ctx.EditorGrid.Rows - 1
+	ctx.UpdateCursorPositionMax()
 }

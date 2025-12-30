@@ -23,20 +23,6 @@ type Context struct {
 }
 
 func HandleKey(ctx *Context, k motion.Key) {
-	switch k {
-	case motion.CtrlW:
-		ctx.Cursor.TransitionMode(cursor.ModeWindowManagement)
-		return
-	case motion.CtrlE:
-		ctx.Cursor.TransitionMode(cursor.ModeNormal)
-		if ctx.Cursor.Type != cursor.TypeConnections {
-			ctx.WindowManager.ChangeWindow(cursor.TypeConnections)
-		} else {
-			ctx.WindowManager.ChangeWindow(cursor.TypeEditor)
-		}
-		return
-	}
-
 	switch ctx.Cursor.Common.Mode {
 	case cursor.ModeNormal:
 		NormalMode{}.Handle(ctx, k)
@@ -62,4 +48,13 @@ func HandleKey(ctx *Context, k motion.Key) {
 	default:
 		slog.Error("Handling of mode failed.", slog.String("mode", ctx.Cursor.Common.Mode.String()))
 	}
+}
+
+func (ctx *Context) UpdateCursorPositionMax() {
+	ctx.Cursor.Position.UpdateMax(
+		max(0, ctx.EditorGrid.Cols[ctx.Cursor.Position.Row]-1),
+		max(0, ctx.EditorGrid.Rows-1),
+		ctx.EditorGrid.Cols,
+	)
+	//slog.Debug("Cursor max positions updated", slog.Any("ctx.Cursor.Position", ctx.Cursor.Position))
 }

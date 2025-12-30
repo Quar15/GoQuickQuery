@@ -43,3 +43,9 @@ func (c *CursorPosition) Init() {
 	c.Row = 0
 	c.ResetSelect()
 }
+
+func (c *CursorPosition) UpdateMax(maxCol, maxRow int32, maxColForRows []int32) {
+	c.MaxCol = maxCol
+	c.MaxRow = maxRow
+	c.MaxColForRows = maxColForRows
+}

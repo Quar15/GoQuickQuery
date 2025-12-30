@@ -27,7 +27,7 @@ func NewGrid() *Grid {
 
 	return &Grid{
 		Text:      []string{""},
-		Rows:      0,
+		Rows:      1,
 		Cols:      []int32{0},
 		Highlight: highlight,
 		MaxCol:    0,
@@ -160,8 +160,8 @@ func (eg *Grid) DeleteCharBefore(row, col int32) (newRow, newCol int32) {
 
 	if row > 0 {
 		newRow = row - 1
+		newCol = eg.Cols[newRow]
 		eg.joinLines(newRow)
-		newCol = eg.Cols[newRow] - 1
 		return newRow, newCol
 	}
 
@@ -187,9 +187,52 @@ func (eg *Grid) joinLines(row int32) {
 	eg.recalculateMaxCol(row)
 }
 
+func (eg *Grid) InsertEmptyLineBelow(row int32) (newRow, newCol int32) {
+	newRowIdx := row + 1
+
+	eg.Text = append(eg.Text, "")
+	eg.Cols = append(eg.Cols, 0)
+	eg.Highlight = append(eg.Highlight, nil)
+
+	if newRowIdx < eg.Rows {
+		copy(eg.Text[newRowIdx+1:], eg.Text[newRowIdx:])
+		copy(eg.Cols[newRowIdx+1:], eg.Cols[newRowIdx:])
+		copy(eg.Highlight[newRowIdx+1:], eg.Highlight[newRowIdx:])
+	}
+
+	eg.Text[newRowIdx] = ""
+	eg.Cols[newRowIdx] = 0
+	eg.Highlight[newRowIdx] = nil
+
+	eg.Rows++
+
+	return newRowIdx, 0
+}
+
+func (eg *Grid) InsertEmptyLineAbove(row int32) (newRow, newCol int32) {
+	oldRowIdx := row + 1
+
+	eg.Text = append(eg.Text, "")
+	eg.Cols = append(eg.Cols, 0)
+	eg.Highlight = append(eg.Highlight, nil)
+
+	copy(eg.Text[oldRowIdx:], eg.Text[row:])
+	copy(eg.Cols[oldRowIdx:], eg.Cols[row:])
+	copy(eg.Highlight[oldRowIdx:], eg.Highlight[row:])
+
+	eg.Text[row] = ""
+	eg.Cols[row] = 0
+	eg.Highlight[row] = nil
+
+	eg.Rows++
+
+	return row, 0
+}
+
 func (eg *Grid) InsertNewLine(row, col int32) (newRow, newCol int32) {
 	eg.mu.Lock()
 	defer eg.mu.Unlock()
+	slog.Debug("Adding new line", slog.Int("row", int(row)), slog.Int("col", int(col)))
 	line := eg.Text[row]
 	before := line[:col]
 	after := line[col:]
@@ -224,7 +267,7 @@ func (eg *Grid) recalculateMaxCol(row int32) {
 		return
 	}
 
-	eg.MaxCol = row
+	eg.MaxCol = eg.Cols[row]
 	for _, col := range eg.Cols {
 		if col > eg.MaxCol {
 			eg.MaxCol = col

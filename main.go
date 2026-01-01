@@ -135,17 +135,17 @@ func (a *App) close() {
 func (a *App) run() error {
 	a.initWindow()
 
+	// Assets need to be loaded after window initialization
 	appAssets := &assets.Assets{}
 	if err := appAssets.LoadAssets(); err != nil {
 		return fmt.Errorf("load assets: %w", err)
 	}
 	a.assets = appAssets
 
-	commandZoneHeight := appAssets.MainFontSize*2 + appAssets.MainFontSpacing*2
 	rl.SetTargetFPS(60)
 
 	for !rl.WindowShouldClose() {
-		a.update(commandZoneHeight)
+		a.update()
 		a.draw()
 	}
 
@@ -156,15 +156,17 @@ func (a *App) initWindow() {
 	screenWidth := rl.GetScreenWidth()
 	screenHeight := rl.GetScreenHeight()
 
-	rl.SetConfigFlags(rl.FlagWindowResizable)
+	rl.SetConfigFlags(rl.FlagWindowResizable | rl.FlagWindowAlwaysRun)
+	rl.SetTraceLogLevel(rl.LogWarning)
 	rl.InitWindow(int32(screenWidth), int32(screenHeight), "GQQ")
 	rl.SetExitKey(rl.KeyNull)
 }
 
-func (a *App) update(commandZoneHeight float32) {
+func (a *App) update() {
 	screenWidth := max(rl.GetScreenWidth(), 100)
 	screenHeight := max(rl.GetScreenHeight(), 100)
 
+	commandZoneHeight := a.assets.MainFontSize*2 + a.assets.MainFontSpacing*2
 	rl.SetMouseCursor(rl.MouseCursorDefault)
 	a.splitter.HandleZoneSplit(screenWidth, screenHeight, int(commandZoneHeight))
 

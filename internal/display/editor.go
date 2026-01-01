@@ -17,6 +17,7 @@ type editorRenderParams struct {
 	RowsInitialPadding int32
 	TextPadding        int32
 	LinesPadding       int8
+	RowsToRender       int8
 }
 
 func (z *Zone) DrawEditor(appAssets *assets.Assets, eg *editor.Grid, editorCursor *cursor.Cursor, shouldDrawCursor bool) {
@@ -32,9 +33,10 @@ func (z *Zone) DrawEditor(appAssets *assets.Assets, eg *editor.Grid, editorCurso
 
 	var (
 		contentHeight                int = renderParams.CellHeight*int(eg.Rows+1) + int(renderParams.RowsInitialPadding)
-		counterColumnCharactersCount int = format.CountDigits(int(eg.Rows))
+		counterColumnCharactersCount int = max(format.CountDigits(int(eg.Rows)), 2)
 	)
 	renderParams.CounterColumnWidth = int(appAssets.MainFontCharacterWidth)*counterColumnCharactersCount + int(renderParams.TextPadding*2)
+	renderParams.RowsToRender = z.GetNumberOfVisibleRows(int32(renderParams.CellHeight)) + 1
 	scrollRow, lastRowToRender := updateEditorScrollBasedOnCursor(z, editorCursor, renderParams)
 
 	rl.BeginScissorMode(int32(z.Bounds.X), int32(z.Bounds.Y), int32(z.Bounds.Width), int32(z.Bounds.Height))
@@ -45,7 +47,10 @@ func (z *Zone) DrawEditor(appAssets *assets.Assets, eg *editor.Grid, editorCurso
 	}
 	renderEditorDetectedQueryOutline(z, appAssets, eg, editorCursor, renderParams)
 	for row := scrollRow; row <= lastRowToRender; row++ {
-		renderEditorRowCounter(z, appAssets, counterColumnCharactersCount, renderParams, row)
+		renderEditorRowCounter(z, appAssets, counterColumnCharactersCount, renderParams, row, strconv.Itoa(int(row+1)))
+	}
+	for row := lastRowToRender + 1; row <= int32(renderParams.RowsToRender); row++ {
+		renderEditorRowCounter(z, appAssets, counterColumnCharactersCount, renderParams, row, "~")
 	}
 	if shouldDrawCursor {
 		renderEditorCursor(z, appAssets, eg, editorCursor, renderParams)
@@ -107,11 +112,11 @@ func renderEditorDetectedQueryOutline(z *Zone, appAssets *assets.Assets, eg *edi
 	rl.DrawRectangleLinesEx(outlineRect, 2, config.Get().Colors.Accent())
 }
 
-func renderEditorRowCounter(z *Zone, appAssets *assets.Assets, counterColumnCharactersCount int, renderParams editorRenderParams, row int32) {
-	var counterColumnLeftPadding float32 = float32(renderParams.TextPadding) + float32(counterColumnCharactersCount-format.CountDigits(int(row)+1))*appAssets.MainFontCharacterWidth
+func renderEditorRowCounter(z *Zone, appAssets *assets.Assets, counterColumnCharactersCount int, renderParams editorRenderParams, row int32, text string) {
+	var counterColumnLeftPadding float32 = float32(renderParams.TextPadding) + float32(counterColumnCharactersCount-len(text))*appAssets.MainFontCharacterWidth
 	var cellX float32 = z.Bounds.X + counterColumnLeftPadding
 	var cellY float32 = z.Bounds.Y + float32(row*int32(renderParams.CellHeight)) - z.Scroll.Y + float32(renderParams.RowsInitialPadding)
-	appAssets.DrawTextMainFont(strconv.Itoa(int(row+1)), rl.Vector2{X: cellX, Y: cellY}, config.Get().Colors.Overlay0())
+	appAssets.DrawTextMainFont(text, rl.Vector2{X: cellX, Y: cellY}, config.Get().Colors.Overlay0())
 }
 
 func renderEditorCursor(z *Zone, appAssets *assets.Assets, eg *editor.Grid, editorCursor *cursor.Cursor, renderParams editorRenderParams) {
@@ -156,15 +161,14 @@ func updateEditorScrollBasedOnCursor(z *Zone, cursor *cursor.Cursor, renderParam
 	z.Scroll.X = 0
 	// @TODO: Horizontal scrolling with leeway
 
-	var rowsToRender int8 = z.GetNumberOfVisibleRows(int32(renderParams.CellHeight)) + 1
 	scrollRow = int32(z.Scroll.Y) / int32(renderParams.CellHeight)
-	if rowsToRender > renderParams.LinesPadding*2 {
+	if renderParams.RowsToRender > renderParams.LinesPadding*2 {
 		if cursor.Position.Row < scrollRow+int32(renderParams.LinesPadding) {
 			scrollRow = max(cursor.Position.Row-int32(renderParams.LinesPadding), 0)
 		}
 
-		if cursor.Position.Row >= scrollRow+int32(rowsToRender-renderParams.LinesPadding) {
-			scrollRow = cursor.Position.Row - int32(rowsToRender-renderParams.LinesPadding-1)
+		if cursor.Position.Row >= scrollRow+int32(renderParams.RowsToRender-renderParams.LinesPadding) {
+			scrollRow = cursor.Position.Row - int32(renderParams.RowsToRender-renderParams.LinesPadding-1)
 			if cursor.Position.Row >= cursor.Position.MaxRow-int32(renderParams.LinesPadding) {
 				scrollRow -= int32(renderParams.LinesPadding) - (cursor.Position.MaxRow - cursor.Position.Row)
 			}
@@ -176,7 +180,7 @@ func updateEditorScrollBasedOnCursor(z *Zone, cursor *cursor.Cursor, renderParam
 	}
 	scrollRow = min(max(scrollRow, 0), cursor.Position.MaxRow)
 	z.ClampScrollsToZoneSize()
-	lastRowToRender = min(cursor.Position.MaxRow, scrollRow+int32(rowsToRender))
+	lastRowToRender = min(cursor.Position.MaxRow, scrollRow+int32(renderParams.RowsToRender))
 
 	return scrollRow, lastRowToRender
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/quar15/qq-go/internal/motion"
 )
 
+const keySmallD rune = 100
 const keySmallG rune = 103
 const keySmallH rune = 104
 const keySmallJ rune = 106
@@ -27,12 +28,16 @@ func baseMotionSet() *motion.Set {
 	s.AddArrow(rl.KeyUp, motion.MoveUp{})
 	s.AddArrow(rl.KeyRight, motion.MoveRight{})
 
-	s.AddRune(rl.KeyG, motion.MoveEndDown{})
 	s.AddRune(rl.KeyG, motion.MoveToSpecificLineOrDown{})
 	s.Add([]motion.Key{
 		{Code: motion.KeyRune, Rune: keySmallG},
 		{Code: motion.KeyRune, Rune: keySmallG},
 	}, motion.MoveStartUp{})
+
+	s.Add([]motion.Key{
+		{Code: motion.KeyRune, Rune: keySmallD},
+		{Code: motion.KeyRune, Rune: keySmallD},
+	}, motion.DebugMotion{})
 
 	return s
 }

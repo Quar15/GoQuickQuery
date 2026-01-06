@@ -18,6 +18,15 @@ func (VisualMode) Handle(ctx *Context, k motion.Key) {
 		return
 	}
 
+	if cmd, ok := ctx.Commands.Lookup(k); ok {
+		slog.Debug("Visual Mode | Trying to execute command", slog.String("cmd", fmt.Sprintf("%T", cmd)))
+		err := cmd.Execute(ctx)
+		if err != nil {
+			slog.Error("Visual Mode | Failed to execute command", slog.String("cmd", fmt.Sprintf("%T", cmd)))
+		}
+		return
+	}
+
 	res := ctx.Parser.Feed(k)
 	if res.Done && res.Valid {
 		slog.Debug("Visual Mode | Applying motion", slog.String("res.Motion", fmt.Sprintf("%T", res.Motion)), slog.Int("res.Count", res.Count))

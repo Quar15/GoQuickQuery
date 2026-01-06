@@ -58,6 +58,10 @@ func EditorMotionSet() (*motion.Set, *mode.CommandRegistry) {
 		motion.Key{Code: motion.KeyEnter, Rune: rl.KeyEnter, Modifiers: motion.ModCtrl},
 		commands.ExecuteSQLCommand{},
 	)
+	cr.Bind(
+		motion.Key{Code: motion.KeyRune, Rune: rl.KeyC, Modifiers: motion.ModCtrl},
+		commands.CopyToClipboardEditor{},
+	)
 
 	slog.Debug("Initialized editor motion set", slog.Any("setTrie", s.Root()))
 	return s, cr
@@ -66,6 +70,10 @@ func EditorMotionSet() (*motion.Set, *mode.CommandRegistry) {
 func SpreadsheetMotionSet() (*motion.Set, *mode.CommandRegistry) {
 	s := baseMotionSet()
 	cr := baseCommandRegistry()
+	cr.Bind(
+		motion.Key{Code: motion.KeyRune, Rune: rl.KeyC, Modifiers: motion.ModCtrl},
+		commands.CopyToClipboardSpreadsheet{},
+	)
 
 	slog.Debug("Initialized spreadsheet motion set", slog.Any("setTrie", s.Root()))
 	return s, cr

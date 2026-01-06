@@ -20,6 +20,7 @@ type Context struct {
 	ConnManager   *database.ConnectionManager
 	WindowManager *WindowManager
 	EditorGrid    *editor.Grid
+	DataGrid      *database.DataGrid
 }
 
 func HandleKey(ctx *Context, k motion.Key) {

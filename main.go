@@ -100,7 +100,7 @@ func newApp(cfg *config.Config) *App {
 	appCursors := &cursors{
 		common:      cursorCommon,
 		editor:      initEditorContext(cursorCommon, connMgr, eg),
-		spreadsheet: initSpreadsheetContext(cursorCommon, connMgr),
+		spreadsheet: initSpreadsheetContext(cursorCommon, connMgr, dg),
 		connections: initConnectionsContext(cursorCommon, connMgr),
 	}
 	appCursors.connections.Cursor.Position.MaxRow = int32(len(cfg.Connections) - 1)
@@ -337,7 +337,7 @@ func initEditorContext(common *cursor.Common, connManager *database.ConnectionMa
 	}
 }
 
-func initSpreadsheetContext(common *cursor.Common, connManager *database.ConnectionManager) *mode.Context {
+func initSpreadsheetContext(common *cursor.Common, connManager *database.ConnectionManager, dg *database.DataGrid) *mode.Context {
 	motions, commandRegistry := setup.SpreadsheetMotionSet()
 	parser := motion.NewParser(motions.Root())
 	cur := cursor.New(common, cursor.TypeSpreadsheet)
@@ -347,6 +347,7 @@ func initSpreadsheetContext(common *cursor.Common, connManager *database.Connect
 		Parser:      parser,
 		Commands:    commandRegistry,
 		ConnManager: connManager,
+		DataGrid:    dg,
 	}
 }
 

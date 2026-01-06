@@ -212,7 +212,13 @@ func (a *App) draw() {
 	editorIsFocused := a.cursors.editor.Cursor.IsActive()
 	a.zones.top.DrawEditor(a.assets, a.editGrid, a.cursors.editor.Cursor, editorIsFocused)
 	a.zones.bottom.DrawSpreadsheetZone(a.assets, a.dataGrid, a.cursors.spreadsheet.Cursor)
-	a.zones.command.DrawCommandZone(a.cfg, a.assets, a.cursors.editor.Cursor, a.connMgr.GetCurrentConnectionName())
+	if editorIsFocused {
+		a.zones.command.DrawCommandZone(a.cfg, a.assets, a.cursors.editor.Cursor, a.connMgr.GetCurrentConnectionName())
+	} else if a.cursors.spreadsheet.Cursor.IsActive() {
+		a.zones.command.DrawCommandZone(a.cfg, a.assets, a.cursors.spreadsheet.Cursor, a.connMgr.GetCurrentConnectionName())
+	} else if a.cursors.connections.Cursor.IsActive() {
+		a.zones.command.DrawCommandZone(a.cfg, a.assets, a.cursors.connections.Cursor, a.connMgr.GetCurrentConnectionName())
+	}
 
 	a.splitter.Draw(a.windowMgr.CurrCtx().Cursor.Type)
 
